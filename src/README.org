@@ -1,0 +1,35 @@
+#+TITLE: Source codes
+#+SUBTITLE: =src=
+
+This directory contain all the codes (exploratory or final). 
+
+It has the following structure:
+
+#+BEGIN_SRC sh :results output :exports results :cache yes
+tree -F -d -L 2 ./
+#+END_SRC
+
+#+RESULTS[148c8ceb23035813c239f10b432368b6c6ab16b5]:
+#+begin_example
+./
+├── data
+│   ├── explorations
+│   ├── handies
+│   ├── processed
+│   └── simulations
+├── exptools
+│   ├── exties
+│   ├── nucleus
+│   ├── testies
+│   └── utils
+├── methods
+├── misc
+├── packages
+│   └── zyxPackage
+├── simulations
+└── utilities
+
+16 directories
+#+end_example
+
+It should be noted that, these codes are script bones (if needed) used for the exploratory analysis (e.g., if some long script is needed there). 

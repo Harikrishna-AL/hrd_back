@@ -1,0 +1,6 @@
+* Organization
+** Draft on overleaf
+#+BEGIN_SRC sh :eval no
+cd ./reports/papers/effCodCriticality/inprep
+git submodule add git@github.com:shervinsafavi/ms_effCodCriticality.git ./shared
+#+END_SRC

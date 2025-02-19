@@ -1,0 +1,11 @@
+#+TITLE: Sandbox
+
+This directory is contains all the tests (codes, software). 
+If something tested here and used in the project should be copied/moved to an appropriate location.
+
+It helps to also follow this naming convention here:
+
+~<number>_<brief name of the content>~
+
+For example, ~1_ABaetheticModel~
+

@@ -1,0 +1,4 @@
+#+TITLE: Visualizations
+
+This directory is contains all the codes used for reporting visualizations (figures of a paper, poster, talk etc). 
+Here /computational/ routines should not be included.

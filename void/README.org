@@ -1,0 +1,4 @@
+#+TITLE: Void
+
+As the name suggest, this directory contains 'void' files (files not useful/helpful anymore, but also with tendency of keeping).
+

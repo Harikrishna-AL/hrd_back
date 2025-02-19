@@ -1,0 +1,13 @@
+#+TITLE: Notebooks
+
+This directory contain all the notebooks (Ipython, org files, etc), that demonstrate the analysis and the corresponding results. 
+They typically use the following naming convention:
+
+~<number>_<analysis tag>_<brief name of the analysis>~
+
+For example, ~111_anl_aesthValueIn1dim~. 
+~analysis tag~ indicates the category of your analysis. 
+For instance in the course of the analysis we simulate toy models (can be noted as ~stm~), we do parameter exploration (can be noted as ~pex~), etc. 
+We also note these /abbreviations/ in the [[./ealog.org][log file]].
+ 
+It's recommended to write a brief noted  (one-line summary) of the analysis and outcome in the [[./ealog.org][log file]] (why we did it and what we learn from it).

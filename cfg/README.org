@@ -1,0 +1,21 @@
+#+TITLE: Configuration files
+
+This directory contains project /configuration/ files. 
+For instance, if there is a set of paths that is always called when user start working on the project. In this project structure, files here are typically called in ~ignit~ files.
+
+One example, I define a ~MATLAB~ function that is called by my project start-up function (see the [[./README.org][README]] file), to add the necessary functions to accessible paths of ~MATLAB~. 
+Here is the example function:
+
+#+BEGIN_SRC matlab :eval no :exports code
+function srchpth = def_searchPath(projDirStruct)
+% srchpth = def_searchPath(projDirStruct)
+% content of this function is customized specificuly to a project (location)
+
+cntr = 0;
+
+%% basics 
+cntr = cntr + 1; srchpth{cntr} = fullfile(... 
+    projDirStruct.src, 'exptools', 'coreroutines');
+cntr = cntr + 1; srchpth{cntr} = fullfile(... 
+    projDirStruct.src, 'exptools', 'utils');
+#+END_SRC

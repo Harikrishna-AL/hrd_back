@@ -1,0 +1,4 @@
+#+TITLE: Notes
+
+As the name suggests, this directory contains the note files (e.g. meeting agenda) and other scattered notes that we might write in the course of a project.
+

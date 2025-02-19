@@ -1,0 +1,20 @@
+#+TITLE: Explorations
+
+This directory broadly contain almost all the analysis that was developed during the project.
+For instance, ideas for data analysis, different versions of a model (if it's a modeling project).
+It contains the following directories:
+
+#+BEGIN_SRC sh :results output :exports results :cache yes
+tree -F -d -L 2 ./
+#+END_SRC
+
+#+RESULTS[148c8ceb23035813c239f10b432368b6c6ab16b5]:
+: ./
+: ├── notebooks
+: ├── soa
+: └── unpublished
+: 
+: 3 directories
+
+The most frequently used one are [[./notebooks][notebooks]] (see its [[./notebooks/README.org][README file]] for more details) and 
+[[./soa][soa]] (see its [[./soa/README.org][README file]] for more details).

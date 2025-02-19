@@ -1,0 +1,48 @@
+#+AUTHOR: Shervin Safavi
+#+EMAIL: research@shervinsafavi.org
+#+TITLE: Log of exploratory analysis for *xyz* project
+#+SUBTITLE: *xyz:* Xenic Yelling Zoo
+#+PROPERTY: header-args :eval never-export
+#+LaTeX_CLASS: article
+#+LATEX_HEADER: \usepackage{natbib}
+#+LATEX_HEADER: \setcitestyle{authoryear,open={(},close={)}}
+#+LaTeX_HEADER: \usepackage{graphicx}
+#+LaTeX_HEADER: \usepackage{url}
+#+LATEX_CLASS_OPTIONS: [a4paper, 11pt, colorlinks=true, citecolor=., linkcolor=black, urlcolor=black]
+#+LATEX_HEADER: \usepackage[linktocpage,pdfstartview=FitH,colorlinks, linkcolor=blue,anchorcolor=blue, citecolor=blue,filecolor=blue,menucolor=blue,urlcolor=blue"]{hyperref}
+#+LATEX_HEADER: \usepackage[top=1in, bottom=1.in, left=1in, right=1in]{geometry}
+#+LaTeX_HEADER: \usepackage{minted}
+#+LaTeX_HEADER: \usepackage{enumitem}
+#+LaTeX_HEADER: \setlist[itemize]{noitemsep} % Comment out for wider separation in lists.
+#+LaTeX_HEADER: \setlist[enumerate]{noitemsep}
+
+
+\maketitle
+
+* Conventions
+** Abbreviations
+
+
+| # | abbreviation | full name                     |
+|---+--------------+-------------------------------|
+| 1 | =stm=        | simulation toy models         |
+| 2 | =shm=        | simulation hierarchical model |
+
+** Tags
+
+| # | tag | description |
+|---+-----+-------------|
+| 1 |     |             |
+
+\clearpage
+
+* Exploratory analysis 
+** =1_stm_ip_pomdp=
+** =2_stm_ip_towardPomdp4bp=
+ toward making the percpetual suitability model
+
+ * dummy :ignore:
+   # does not work at moment :(
+ 
+# bibliographystyle:abbrvnat
+ # bibliography:/home/ssafavi/Nextcloud/libraries/zotlib.bib

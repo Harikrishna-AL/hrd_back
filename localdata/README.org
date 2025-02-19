@@ -1,0 +1,6 @@
+#+TITLE: Local data
+
+As the name suggests, this directory should be used for storing (only) *light* local data. 
+For larger data set (say more than 50 MB we should use a better storage solution)
+
+

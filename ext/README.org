@@ -1,0 +1,5 @@
+#+TITLE: Externals
+
+This directory contains external codes, packages, etc. 
+Ideally such external packages have their own git and can be added as ~git submodule~ (~git submodule~ is full-fledged git repo nested inside another git repo).
+
