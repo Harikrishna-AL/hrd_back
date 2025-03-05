@@ -1,3 +1,60 @@
 src/hrd/hrl_bs_ijcnn2023/videos/
 src/hrd/hrl_bs_ijcnn2023/runs/
 src/hrd/hrl_bs_ijcnn2023/models/
+
+# video file
+**/*.avi
+**/*.mpg
+
+**/*.~lock*
+
+
+._sync_*
+
+## Core latex/pdflatex auxiliary files:
+*.aux
+*.lof
+*.log
+*.lot
+*.fls
+*.out
+*.nav
+*.snm
+*.toc
+*.fmt
+*.fot
+*.cb
+*.cb2
+.*.lb
+*.synctex.gz
+*.gz
+*.bbl
+*.blg
+*.bib.sav
+*.bcf
+*.blg
+*/*.log
+**/*.aux
+**.*aux
+**.fdb_latexmk
+
+# glossary files
+*.glg
+*.glo
+*.gls
+*.ist
+
+main.pdf
+main-blx.bib
+main.run.xml
+
+## emacs stuff
+auto/*
+ltximg/
+
+## python
+*/__pycache__/*
+**/.ipynb_checkpoints/*
+**/__pycache__/
+
+**/*.~undo-tree~
