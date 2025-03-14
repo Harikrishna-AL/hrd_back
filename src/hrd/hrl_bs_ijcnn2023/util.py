@@ -98,3 +98,25 @@ def test_env(agent: torch.nn.Module, test_envs: gym.vector.SyncVectorEnv, n_runs
     agent.train()
 
     return episode_reward, episode_length, episode_error, ave_reward
+
+def create_connectivity_matrix(layers: nn.Sequential):
+    
+	total_neurons = 0
+	for layer in layers:
+		if isinstance(layer, nn.Linear):
+			# layer = layers[i]
+			total_neurons += layer.out_features
+		
+	total_neurons += layers[0].in_features
+    # total_neurons =
+	C = np.zeros((total_neurons, total_neurons))
+
+	start_idx = 0  # Index of first neuron in the current layer
+	for layer in layers:
+		# layer = layers[i]
+		if isinstance(layer, nn.Linear):
+			C[start_idx:start_idx + layer.in_features, start_idx + layer.in_features:start_idx + layer.in_features + layer.out_features] = layer.weight.T.cpu().detach().numpy()
+			C.T[start_idx:start_idx + layer.in_features, start_idx + layer.in_features:start_idx + layer.in_features + layer.out_features] = layer.weight.T.cpu().detach().numpy()
+			start_idx += layer.in_features
+   
+	return C

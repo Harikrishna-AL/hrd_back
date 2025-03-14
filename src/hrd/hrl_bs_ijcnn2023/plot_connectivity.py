@@ -31,23 +31,6 @@ def create_connectivity_matrix(layers: nn.Sequential):
 			C.T[start_idx:start_idx + layer.in_features, start_idx + layer.in_features:start_idx + layer.in_features + layer.out_features] = layer.weight.T.detach().numpy()
 			start_idx += layer.in_features
    
-   
-			
-	# for i in range(len(layer_sizes) - 1):
-	#     layer_size = layer_sizes[i]
-	#     next_layer_size = layer_sizes[i + 1]
-		
-	#     # Random weight initialization
-	#     weights = np.random.randn(next_layer_size, layer_size)
-		
-	#     # Fill connectivity matrix
-	#     C[start_idx:start_idx + layer_size, start_idx + layer_size:start_idx + layer_size + next_layer_size] = weights.T
-
-	#     start_idx += layer_size  # Move to the next layer
-
-	# C[start_idx:start_idx + layer.in_features, start_idx + layer.in_features:start_idx + layer.in_features + layer.out_features] = layer.weight.T.detach().numpy()
-	# C.T[start_idx:start_idx + layer.in_features, start_idx + layer.in_features:start_idx + layer.in_features + layer.out_features] = layer.weight.T.detach().numpy()
-
 	return C
 
 class Agent(nn.Module):

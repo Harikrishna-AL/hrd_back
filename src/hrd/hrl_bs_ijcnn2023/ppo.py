@@ -19,7 +19,7 @@ import torch.optim as optim
 from torch.distributions.normal import Normal
 from torch.utils.tensorboard import SummaryWriter
 
-from util import layer_init, BetaHead, make_env, test_env
+from util import layer_init, BetaHead, make_env, test_env, create_connectivity_matrix
 
 
 def parse_args():
@@ -209,6 +209,11 @@ if __name__ == "__main__":
 	os.makedirs("models", exist_ok=True)
 
 	for update in range(1, num_updates + 1):
+		
+		if update % (num_updates // 5) == 1:
+			C = create_connectivity_matrix(agent.actor)
+			#save the connectivity matrix
+			np.save(f"./connectivity_matrix/connectivity_matrix_{update}.npy", C)
 		# Test Run every several iterations
 		if update == 1 or update % args.test_every_itr == 0:
 			print(f"Test @ {update - 1} START ------- ")

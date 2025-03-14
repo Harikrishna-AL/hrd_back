@@ -58,3 +58,6 @@ ltximg/
 **/__pycache__/
 
 **/*.~undo-tree~
+__pycache__/
+*.pyc
+*.npy
