@@ -19,6 +19,11 @@ Torque values of the joints of the robot; Dim = 8
 ## What is the state space?
 Embedded image/sensor observation from exteroception concatenated with proprioception and interoception
 - dim without image: 40+27+2 = 69
+  - Extroception (40 dim) : 20 dim for each of the two depth sensors measuring the distance to the nearest resource(red/blue) in 20 directions. Which means 20 dims for blue and 20 dims for red resource respectively.
+
+  - Proprioception (27 dim) : 27 dims consisting of the position and velocity of the joints of the robot.
+  
+  - Interoception (2 dim) : 2 dims (Red and Blue resource) consisting of the internal state of the robot. 
 - dim with image: 200+27+2 = 229
 
 ## Brief documentation of the architecture of the network?
