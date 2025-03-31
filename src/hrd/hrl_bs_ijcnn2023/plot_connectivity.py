@@ -64,6 +64,8 @@ class Agent(nn.Module):
 			action = probs.sample()
 		return action, probs.log_prob(action), probs.entropy(), self.critic(x)
 
+	
+
 seed_ = (1 + 1) * 1
 envs = gym.vector.SyncVectorEnv(
     [make_env(env_id='SmallLowGearAntTRP-v0',

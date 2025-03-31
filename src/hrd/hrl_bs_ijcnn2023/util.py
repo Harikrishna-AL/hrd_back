@@ -1,22 +1,29 @@
 import gym
+import neurogym
 
 import numpy as np
 import torch
 from torch import nn
 
 
-def make_env(env_id, seed, idx, capture_video, run_name, max_episode_steps=np.inf, gaussian_policy=False):
+def make_env(env_id, seed, idx, capture_video, run_name, max_episode_steps=np.inf, gaussian_policy=False, cog=False):
     def thunk():
-        env = gym.make(
-            env_id,
-            dim_resource=3,
-            max_episode_steps=max_episode_steps,
-        )
+        if env_id.startswith("Perceptual"):
+            env = gym.make(
+                env_id
+            )
+        else:
+            env = gym.make(
+                env_id,
+                dim_resource=3,
+                max_episode_steps=max_episode_steps,
+            )
         env = gym.wrappers.RecordEpisodeStatistics(env)
         if capture_video:
             if idx == 0:
                 env = gym.wrappers.RecordVideo(env, f"videos/{run_name}")
-        env = gym.wrappers.ClipAction(env)
+        if not cog:
+            env = gym.wrappers.ClipAction(env)
         if not gaussian_policy:
             env = gym.wrappers.RescaleAction(env, 0, 1)  # for Beta policy
         env.seed(seed)
@@ -31,6 +38,8 @@ class BetaHead(nn.Module):
     def __init__(self, in_features, action_size):
         super(BetaHead, self).__init__()
 
+        self.in_features = in_features
+        self.out_features = action_size
         self.fcc_c0 = nn.Linear(in_features, action_size)
         nn.init.orthogonal_(self.fcc_c0.weight, gain=0.01)
         nn.init.zeros_(self.fcc_c0.bias)
@@ -45,6 +54,29 @@ class BetaHead(nn.Module):
         return torch.distributions.Independent(
             torch.distributions.Beta(c1, c0), 1
         )
+        
+    def expand(self, new_in_features, new_out_features):
+        """ Expands the input and output features of BetaHead. """
+        old_in, old_out = self.in_features, self.out_features
+        
+        # Expand fcc_c0
+        new_fcc_c0 = nn.Linear(new_in_features, new_out_features)
+        new_fcc_c0.weight.data[:, :old_in] = self.fcc_c0.weight.data
+        new_fcc_c0.bias.data[:old_out] = self.fcc_c0.bias.data
+        nn.init.xavier_uniform_(new_fcc_c0.weight.data[:, old_in:])
+        nn.init.zeros_(new_fcc_c0.bias.data[old_out:])
+        
+        # Expand fcc_c1
+        new_fcc_c1 = nn.Linear(new_in_features, new_out_features)
+        new_fcc_c1.weight.data[:, :old_in] = self.fcc_c1.weight.data
+        new_fcc_c1.bias.data[:old_out] = self.fcc_c1.bias.data
+        nn.init.xavier_uniform_(new_fcc_c1.weight.data[:, old_in:])
+        nn.init.zeros_(new_fcc_c1.bias.data[old_out:])
+        
+        self.fcc_c0 = new_fcc_c0
+        self.fcc_c1 = new_fcc_c1
+        self.in_features = new_in_features
+        self.out_features = new_out_features
 
 
 def layer_init(layer, std=np.sqrt(2), bias_const=0.0):
