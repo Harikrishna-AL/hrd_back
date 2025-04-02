@@ -20,7 +20,7 @@ import torch.optim as optim
 from torch.distributions.normal import Normal
 from torch.utils.tensorboard import SummaryWriter
 
-from util import layer_init, BetaHead, make_env, test_env, create_connectivity_matrix
+from util import layer_init, BetaHead, make_env, test_env, create_connectivity_matrix, dual_test_env
 
 
 def parse_args():
@@ -102,37 +102,103 @@ def parse_args():
 	# fmt: on
 	return args
 
+def layer_init(layer, std=np.sqrt(2), bias_const=0.0):
+    nn.init.orthogonal_(layer.weight, std)
+    nn.init.constant_(layer.bias, bias_const)
+    return layer
+
 class Agent(nn.Module):
-	def __init__(self, envs, gaussian=False):
-		super().__init__()
+    def __init__(self, envs, gaussian=False):
+        super().__init__()
+        self.is_gaussian = gaussian
+        
+        obs_dim = np.array(envs.single_observation_space.shape).prod()
+        act_dim = np.prod(envs.single_action_space.shape)
 
-		self.is_gaussian = gaussian
+        self.critic = nn.Sequential(
+            layer_init(nn.Linear(obs_dim, 256)),
+            nn.Tanh(),
+            layer_init(nn.Linear(256, 256)),
+            nn.Tanh(),
+            layer_init(nn.Linear(256, 1), std=1.0),
+        )
 
-		self.critic = nn.Sequential(
-			layer_init(nn.Linear(np.array(envs.single_observation_space.shape).prod(), 256)),
-			nn.Tanh(),
-			layer_init(nn.Linear(256, 256)),
-			nn.Tanh(),
-			layer_init(nn.Linear(256, 1), std=1.0),
-		)
+        self.actor = nn.Sequential(
+            layer_init(nn.Linear(obs_dim, 256)),
+            nn.Tanh(),
+            layer_init(nn.Linear(256, 256)),
+            nn.Tanh(),
+            BetaHead(256, act_dim),
+        )
+    def get_value(self, x):
+        return self.critic(x)
 
-		self.actor = nn.Sequential(
-			layer_init(nn.Linear(np.array(envs.single_observation_space.shape).prod(), 256)),
-			nn.Tanh(),
-			layer_init(nn.Linear(256, 256)),
-			nn.Tanh(),
-			BetaHead(256, np.prod(envs.single_action_space.shape)),
-		)
+    def get_action_and_value(self, x, action=None):
+        probs = self.actor(x)
+        if action is None:
+            action = probs.sample()
+        return action, probs.log_prob(action), probs.entropy(), self.critic(x)
 
-	def get_value(self, x):
-		return self.critic(x)
+    def expand_layer(self, network, layer_idx, new_out_features, new_in_features):
+        """ Expands any given layer in a sequential network, including BetaHead. """
+        # if layer_idx >= len(network) or not isinstance(network[layer_idx], nn.Linear) or not isinstance(network[layer_idx], util.BetaHead):
+        #     raise ValueError(f"Layer {layer_idx} is not a Linear layer or does not exist. It is of type {type(network[layer_idx])}.")
+        
+        old_layer = network[layer_idx]
+        in_features = old_layer.in_features
+        old_out_features = old_layer.out_features
 
-	def get_action_and_value(self, x, action=None):
-		probs = self.actor(x)
-		if action is None:
-			action = probs.sample()
-		return action, probs.log_prob(action), probs.entropy(), self.critic(x)
+        # Expand current layer
+        if isinstance(old_layer, nn.Linear):
+            if new_in_features == -1:
+                new_in_features = in_features
+                    
+            new_layer = nn.Linear(new_in_features, new_out_features)
+            new_layer.weight.data[:old_out_features, :in_features] = old_layer.weight.data
+            new_layer.bias.data[:old_out_features] = old_layer.bias.data
+            if new_in_features != in_features:
+                nn.init.xavier_uniform_(new_layer.weight.data[old_out_features:, in_features:])
+            else:
+                nn.init.xavier_uniform_(new_layer.weight.data[old_out_features:, :])
+                
+            nn.init.zeros_(new_layer.bias.data[old_out_features:])
+            
+        elif isinstance(old_layer, BetaHead):
+            new_layer = BetaHead(in_features, new_out_features)
+            new_layer.fcc_c0.weight.data[:old_out_features, :] = old_layer.fcc_c0.weight.data
+            new_layer.fcc_c0.bias.data[:old_out_features] = old_layer.fcc_c0.bias.data
+            new_layer.fcc_c1.weight.data[:old_out_features, :] = old_layer.fcc_c1.weight.data
+            new_layer.fcc_c1.bias.data[:old_out_features] = old_layer.fcc_c1.bias.data
+            nn.init.xavier_uniform_(new_layer.fcc_c0.weight.data[old_out_features:, :])
+            nn.init.zeros_(new_layer.fcc_c0.bias.data[old_out_features:])
+            nn.init.xavier_uniform_(new_layer.fcc_c1.weight.data[old_out_features:, :])
+            nn.init.zeros_(new_layer.fcc_c1.bias.data[old_out_features:])
+        
+        network[layer_idx] = new_layer
 
+        # Update next layer if it's a Linear layer or BetaHead
+        next_layer_idx = layer_idx + 2  # Skip activation
+        if next_layer_idx < len(network):
+            next_layer = network[next_layer_idx]
+            if isinstance(next_layer, nn.Linear):
+                old_next_weights = next_layer.weight.data.clone()
+                old_next_bias = next_layer.bias.data.clone()
+                
+                new_next_layer = nn.Linear(new_out_features, next_layer.out_features)
+                new_next_layer.weight.data[:, :old_out_features] = old_next_weights
+                new_next_layer.bias.data = old_next_bias
+                nn.init.xavier_uniform_(new_next_layer.weight.data[:, old_out_features:])
+                
+                network[next_layer_idx] = new_next_layer
+            elif isinstance(next_layer, BetaHead):
+                next_layer.expand(new_in_features=new_out_features, new_out_features=next_layer.out_features)
+
+    def expand_actor(self, layer_idx, new_out_features, new_in_features):
+        self.expand_layer(self.actor, layer_idx, new_out_features, new_in_features)
+
+    def expand_critic(self, layer_idx, new_out_features, new_in_features):
+        self.expand_layer(self.critic, layer_idx, new_out_features, new_in_features)
+        
 
 if __name__ == "__main__":
     args = parse_args()
@@ -196,10 +262,43 @@ if __name__ == "__main__":
                     max_episode_steps=args.max_test_steps,
                     gaussian_policy=args.gaussian_policy) for i in range(args.num_test_envs)]
     )
-
-    assert isinstance(envs.single_action_space, gym.spaces.Box), "only continuous action space is supported"
+    
+    cog_test_envs = gym.vector.SyncVectorEnv(
+        [make_env(env_id='PerceptualDecisionMaking-v0',
+                    seed=seed_ + i + args.num_test_envs,
+                    idx=i,
+                    capture_video=False,
+                    run_name=None,
+                    max_episode_steps=args.max_steps,
+                    gaussian_policy=True,
+                    cog=True) for i in range(args.num_test_envs)]
+    )   
 
     agent = Agent(envs, gaussian=args.gaussian_policy).to(device)
+    agent.load_state_dict(torch.load('./models/SmallLowGearAntTRP-v0__ppo__0__1741093440.pth'))
+    #freeze the parameters
+    for param in agent.parameters():
+        param.requires_grad = False
+    
+    agent.expand_actor(0,300, 69 + 3)
+    agent.expand_actor(2,300, -1)
+    agent.expand_actor(4,9, -1)
+    agent.actor.insert(4, nn.Linear(300, 300))
+    nn.init.xavier_uniform_(agent.actor[4].weight.data)
+    nn.init.zeros_(agent.actor[4].bias.data)
+    
+    agent.expand_critic(0,300, 69 + 3)
+    agent.expand_critic(2,300, -1)
+    agent.expand_critic(4,1, -1)
+    agent.critic.insert(4, nn.Linear(300, 300))
+    nn.init.xavier_uniform_(agent.critic[4].weight.data)
+    nn.init.zeros_(agent.critic[4].bias.data)
+    
+    agent = agent.to(device)
+    
+    assert isinstance(envs.single_action_space, gym.spaces.Box), "only continuous action space is supported"
+
+    # agent = Agent(envs, gaussian=args.gaussian_policy).to(device)
     optimizer = optim.Adam(agent.parameters(), lr=args.learning_rate, eps=1e-5)
 
     # ALGO Logic: Storage setup
@@ -238,7 +337,7 @@ if __name__ == "__main__":
         # Test Run every several iterations
         if update == 1 or update % args.test_every_itr == 0:
             print(f"Test @ {update - 1} START ------- ")
-            episode_reward, episode_length, episode_error, ave_reward = test_env(agent, test_envs,
+            episode_reward, episode_length, episode_error, ave_reward = dual_test_env(agent, test_envs, cog_test_envs,
                                                                                     n_runs=args.n_test_runs, device=device)
             print(
                 f"########### TEST-{update - 1}: ave_episode_reward:{episode_reward}, ave_episode_length:{episode_length}, ave_episode_error:{episode_error}")
