@@ -140,60 +140,86 @@ class Agent(nn.Module):
         return action, probs.log_prob(action), probs.entropy(), self.critic(x)
 
     def expand_layer(self, network, layer_idx, new_out_features, new_in_features):
-        """ Expands any given layer in a sequential network, including BetaHead. """
-        # if layer_idx >= len(network) or not isinstance(network[layer_idx], nn.Linear) or not isinstance(network[layer_idx], util.BetaHead):
-        #     raise ValueError(f"Layer {layer_idx} is not a Linear layer or does not exist. It is of type {type(network[layer_idx])}.")
-        
         old_layer = network[layer_idx]
         in_features = old_layer.in_features
         old_out_features = old_layer.out_features
 
-        # Expand current layer
         if isinstance(old_layer, nn.Linear):
             if new_in_features == -1:
                 new_in_features = in_features
-                    
+
             new_layer = nn.Linear(new_in_features, new_out_features)
-            new_layer.weight.data[:old_out_features, :in_features] = old_layer.weight.data
-            new_layer.bias.data[:old_out_features] = old_layer.bias.data
+            with torch.no_grad():
+                new_layer.weight[:old_out_features, :in_features] = old_layer.weight.data
+                new_layer.bias[:old_out_features] = old_layer.bias.data
+
+            # Only the new part should be trainable
+            def freeze_old_weights_hook(grad):
+                grad[:old_out_features, :in_features] = 0
+                return grad
+            
+            def freeze_old_bias_hook(grad):
+                grad[:old_out_features] = 0
+                return grad
+
+            new_layer.weight.register_hook(freeze_old_weights_hook)
+            new_layer.bias.register_hook(freeze_old_bias_hook)
+
+            # Initialize new weights
             if new_in_features != in_features:
                 nn.init.xavier_uniform_(new_layer.weight.data[old_out_features:, in_features:])
             else:
                 nn.init.xavier_uniform_(new_layer.weight.data[old_out_features:, :])
-                
             nn.init.zeros_(new_layer.bias.data[old_out_features:])
-            
+
         elif isinstance(old_layer, BetaHead):
             new_layer = BetaHead(in_features, new_out_features)
-            new_layer.fcc_c0.weight.data[:old_out_features, :] = old_layer.fcc_c0.weight.data
-            new_layer.fcc_c0.bias.data[:old_out_features] = old_layer.fcc_c0.bias.data
-            new_layer.fcc_c1.weight.data[:old_out_features, :] = old_layer.fcc_c1.weight.data
-            new_layer.fcc_c1.bias.data[:old_out_features] = old_layer.fcc_c1.bias.data
+            with torch.no_grad():
+                new_layer.fcc_c0.weight[:old_out_features, :] = old_layer.fcc_c0.weight.data
+                new_layer.fcc_c0.bias[:old_out_features] = old_layer.fcc_c0.bias.data
+                new_layer.fcc_c1.weight[:old_out_features, :] = old_layer.fcc_c1.weight.data
+                new_layer.fcc_c1.bias[:old_out_features] = old_layer.fcc_c1.bias.data
+
+            def freeze_betahead_hook(grad):
+                grad[:old_out_features] = 0
+                return grad
+
+            new_layer.fcc_c0.weight.register_hook(lambda g: g.index_fill(0, torch.arange(old_out_features), 0))
+            new_layer.fcc_c0.bias.register_hook(freeze_betahead_hook)
+            new_layer.fcc_c1.weight.register_hook(lambda g: g.index_fill(0, torch.arange(old_out_features), 0))
+            new_layer.fcc_c1.bias.register_hook(freeze_betahead_hook)
+
             nn.init.xavier_uniform_(new_layer.fcc_c0.weight.data[old_out_features:, :])
             nn.init.zeros_(new_layer.fcc_c0.bias.data[old_out_features:])
             nn.init.xavier_uniform_(new_layer.fcc_c1.weight.data[old_out_features:, :])
             nn.init.zeros_(new_layer.fcc_c1.bias.data[old_out_features:])
-        
+
         network[layer_idx] = new_layer
 
-        # Update next layer if it's a Linear layer or BetaHead
-        next_layer_idx = layer_idx + 2  # Skip activation
+        # Update next layer if Linear
+        next_layer_idx = layer_idx + 2
         if next_layer_idx < len(network):
             next_layer = network[next_layer_idx]
             if isinstance(next_layer, nn.Linear):
                 old_next_weights = next_layer.weight.data.clone()
                 old_next_bias = next_layer.bias.data.clone()
-                
+
                 new_next_layer = nn.Linear(new_out_features, next_layer.out_features)
-                new_next_layer.weight.data[:, :old_out_features] = old_next_weights
-                # make the require grad of the old weights False
-                
-                new_next_layer.bias.data = old_next_bias
+                with torch.no_grad():
+                    new_next_layer.weight[:, :old_out_features] = old_next_weights
+                    new_next_layer.bias = nn.Parameter(old_next_bias)
+
+                def freeze_old_inputs_hook(grad):
+                    grad[:, :old_out_features] = 0
+                    return grad
+
+                new_next_layer.weight.register_hook(freeze_old_inputs_hook)
+
                 nn.init.xavier_uniform_(new_next_layer.weight.data[:, old_out_features:])
-                
                 network[next_layer_idx] = new_next_layer
             elif isinstance(next_layer, BetaHead):
                 next_layer.expand(new_in_features=new_out_features, new_out_features=next_layer.out_features)
+
 
     def expand_actor(self, layer_idx, new_out_features, new_in_features):
         self.expand_layer(self.actor, layer_idx, new_out_features, new_in_features)
