@@ -20,7 +20,7 @@ import torch.optim as optim
 from torch.distributions.normal import Normal
 from torch.utils.tensorboard import SummaryWriter
 
-from util import layer_init, BetaHead, make_env, test_env, create_connectivity_matrix, dual_test_env
+from util import layer_init, BetaHead, make_env, test_env, create_connectivity_matrix, dual_test_env, check_percent_grad
 
 
 def parse_args():
@@ -186,6 +186,8 @@ class Agent(nn.Module):
                 
                 new_next_layer = nn.Linear(new_out_features, next_layer.out_features)
                 new_next_layer.weight.data[:, :old_out_features] = old_next_weights
+                # make the require grad of the old weights False
+                
                 new_next_layer.bias.data = old_next_bias
                 nn.init.xavier_uniform_(new_next_layer.weight.data[:, old_out_features:])
                 
@@ -296,13 +298,16 @@ if __name__ == "__main__":
     
     agent = agent.to(device)
     
+    percentage_grad = check_percent_grad(agent)
+    print(f"Percentage of parameters with gradients: {percentage_grad:.2f}%")
+    
     assert isinstance(envs.single_action_space, gym.spaces.Box), "only continuous action space is supported"
 
     # agent = Agent(envs, gaussian=args.gaussian_policy).to(device)
     optimizer = optim.Adam(agent.parameters(), lr=args.learning_rate, eps=1e-5)
 
     # ALGO Logic: Storage setup
-    obs_cog = (envs.single_observation_space.shape[0] + 4,)
+    obs_cog = (envs.single_observation_space.shape[0] + 3,)
     action_cog = (envs.single_action_space.shape[0] + 1,)   
     obs = torch.zeros((args.num_steps, args.num_envs) + obs_cog).to(device)
     actions = torch.zeros((args.num_steps, args.num_envs) + action_cog).to(device)
@@ -320,11 +325,16 @@ if __name__ == "__main__":
     global_step = 0
     start_time = time.time()
     next_obs = torch.Tensor(envs.reset()).to(device)
+    next_cog_obs = torch.Tensor(cog_envs.reset()).to(device)
     next_done = torch.zeros(args.num_envs).to(device)
+    next_cog_done = torch.zeros(args.num_envs).to(device)
+    
+    next_obs = torch.cat((next_obs, next_cog_obs), dim=1)
+    # take an or condition between next_done and next_cog_done
+    next_done = torch.logical_or(next_done, next_cog_done)
     num_updates = args.total_timesteps // args.batch_size
     
-    print(next_obs.shape)
-    print(next_done.shape)
+ 
 	
     os.makedirs("models", exist_ok=True)
 
@@ -367,7 +377,13 @@ if __name__ == "__main__":
             logprobs[step] = logprob
 
             # TRY NOT TO MODIFY: execute the game and log data.
-            next_obs, reward, done, info = envs.step(action.cpu().numpy())
+            next_obs, reward, done, info = envs.step(action.cpu().numpy()[:, 8])
+            next_cog_obs, cog_reward, cog_done, cog_info = cog_envs.step(action.cpu().numpy()[:,-1])
+            
+            reward = reward + 0.5 * cog_reward
+            next_obs = torch.Tensor(torch.cat((torch.Tensor(next_obs), torch.Tensor(next_cog_obs)), dim=1)).to(device)
+            next_done = torch.logical_or(torch.Tensor(done).to(device), torch.Tensor(cog_done).to(device))
+            
             rewards[step] = torch.tensor(reward).to(device).view(-1)
             next_obs, next_done = torch.Tensor(next_obs).to(device), torch.Tensor(done).to(device)
 

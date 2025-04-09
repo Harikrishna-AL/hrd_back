@@ -6,6 +6,23 @@ import torch
 from torch import nn
 
 
+def check_percent_grad(model):
+    """
+    Check the percentage of parameters with gradients in a model.
+    """
+    total_params = 0
+    grad_params = 0
+
+    for param in model.parameters():
+        total_params += param.numel()
+        if param.requires_grad:
+            grad_params += param.numel()
+
+    percent_grad = (grad_params / total_params) * 100
+    print(f"Percentage of parameters with gradients: {percent_grad:.2f}%")
+    return percent_grad
+
+
 def make_env(env_id, seed, idx, capture_video, run_name, max_episode_steps=np.inf, gaussian_policy=False, cog=False):
     def thunk():
         if env_id.startswith("Perceptual"):
@@ -98,6 +115,8 @@ def dual_test_env(agent: torch.nn.Module, test_envs: gym.vector.SyncVectorEnv, c
     intero_errors = np.zeros(len(test_envs.envs))
     obs = torch.Tensor(test_envs.reset()).to(device)
     cog_obs = torch.Tensor(cog_test_envs.reset()).to(device)
+    
+    print("Cog obs shape: ", cog_obs.shape)
  
     obs = torch.cat((obs, cog_obs), dim=1).to(device)
     
@@ -111,8 +130,8 @@ def dual_test_env(agent: torch.nn.Module, test_envs: gym.vector.SyncVectorEnv, c
 
         obs = torch.Tensor(torch.cat((torch.Tensor(obs), torch.Tensor(cog_obs)), dim=1) ).to(device)
         
-        print(info, "/n" )
-        print(cog_info)
+        # print(info, "/n" )
+        # print(cog_info)
         
         for idx, item in enumerate(info):
             if "interoception" in item.keys():
@@ -123,9 +142,11 @@ def dual_test_env(agent: torch.nn.Module, test_envs: gym.vector.SyncVectorEnv, c
                     f"TEST: episodic_return={item['episode']['r']}, episodic_length={item['episode']['l']}, episodic_error={intero_errors[idx] / item['episode']['l']}")
                 count_episode += 1
                 episode_reward += item['episode']['r']
+                # print(item['episode'])
                 episode_length += item['episode']['l']
                 episode_error += intero_errors[idx] / item['episode']['l']
                 ave_reward += item['episode']['r'] / item['episode']['l']
+                # print(item['episode']['r'] , item['episode']['l'])
                 intero_errors[idx] = 0
 
             if n_runs <= count_episode:
