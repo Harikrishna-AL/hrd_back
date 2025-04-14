@@ -303,7 +303,7 @@ if __name__ == "__main__":
     )   
 
     agent = Agent(envs, gaussian=args.gaussian_policy).to(device)
-    agent.load_state_dict(torch.load('./models/SmallLowGearAntTRP-v0__ppo__0__1741093440.pth'))
+    agent.load_state_dict(torch.load('./models/SmallLowGearAntTRP-v0__ppo__0__1741093440.pth', map_location=torch.device('cpu')))
     #freeze the parameters
     for param in agent.parameters():
         param.requires_grad = False
@@ -382,7 +382,7 @@ if __name__ == "__main__":
             writer.add_scalar("test/episodic_intero_error", episode_error, global_step)
             writer.add_scalar("test/average_reward", ave_reward, global_step)
             writer.add_scalar("test/test_tick", update - 1, global_step)
-            # torch.save(agent.state_dict(), f"models/{run_name}.pth")
+            torch.save(agent.state_dict(), f"models/{run_name}_cog.pth")
 
         # Annealing the rate if instructed to do so.
         if args.anneal_lr:
@@ -453,9 +453,10 @@ if __name__ == "__main__":
                 advantages = returns - values
 
         # flatten the batch
-        b_obs = obs.reshape((-1,) + envs.single_observation_space.shape)
+        # print(envs.single_observation_space.shape)
+        b_obs = obs.reshape((-1,) + (envs.single_observation_space.shape[0] + 3,))
         b_logprobs = logprobs.reshape(-1)
-        b_actions = actions.reshape((-1,) + envs.single_action_space.shape)
+        b_actions = actions.reshape((-1,) + (envs.single_action_space.shape[0] + 1,))
         b_advantages = advantages.reshape(-1)
         b_returns = returns.reshape(-1)
         b_values = values.reshape(-1)
