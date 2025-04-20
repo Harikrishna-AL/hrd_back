@@ -1,0 +1,7 @@
+from trp_cog_env.envs.ant_trp_env import AntTwoResourceEnv, AntSmallTwoResourceEnv
+from trp_cog_env.envs.ant_sensor_trp_env import SensorAntTwoResourceEnv, SensorAntSmallTwoResourceEnv
+from trp_cog_env.envs.low_gear_ant_trp_env import LowGearAntTwoResourceEnv, LowGearAntSmallTwoResourceEnv
+from trp_cog_env.envs.snake_trp_env import SnakeTwoResourceEnv, SnakeSmallTwoResourceEnv
+from trp_cog_env.envs.swimmer_trp_env import SwimmerTwoResourceEnv, SwimmerSmallTwoResourceEnv
+from trp_cog_env.envs.humanoid_trp_env import HumanoidTwoResourceEnv, HumanoidSmallTwoResourceEnv
+from trp_cog_env.envs.realant_trp_env import RealAntTwoResourceEnv, RealAntSmallTwoResourceEnv

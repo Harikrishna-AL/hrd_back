@@ -1,0 +1,4 @@
+gym==0.21
+mujoco-py==2.1.2.14
+torch
+scipy

@@ -82,7 +82,8 @@ envs = gym.vector.SyncVectorEnv(
                 capture_video=False,
                 run_name='test',
                 max_episode_steps=60_000,
-                gaussian_policy=False) for i in range(1)]
+                gaussian_policy=False,
+                nutrient_val=[0.5,0.5]) for i in range(1)]
 )
 
 
@@ -92,7 +93,7 @@ agent = Agent(envs=envs, gaussian=False)
 agent.load_state_dict(torch.load("./hrl_bs_ijcnn2023/models/SmallLowGearAntTRP-v0__ppo__0__1741201287.pth", weights_only=True))
 agent_random = Agent(envs=envs, gaussian=False)
 
-env = gym.make("SmallLowGearAntTRP-v0")
+env = gym.make("SmallLowGearAntTRP-v0", internal_reset = "setpoint", nutrient_val=[-0.7,-0.7])
 
 env.seed(100)  # Seeding
 

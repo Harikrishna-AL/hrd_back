@@ -33,7 +33,6 @@ class LowGearAntSmallTwoResourceEnv(TwoResourceEnv):
                  activity_range=6.,
                  n_bins=20,
                  sensor_range=16,
-                 internal_reset = "random",
                  *args, **kwargs):
         super().__init__(
             n_blue=n_blue,
@@ -41,6 +40,5 @@ class LowGearAntSmallTwoResourceEnv(TwoResourceEnv):
             n_bins=n_bins,
             activity_range=activity_range,
             sensor_range=sensor_range,
-            internal_reset=internal_reset,
             *args, **kwargs
         )

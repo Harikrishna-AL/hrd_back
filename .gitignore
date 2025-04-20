@@ -62,6 +62,6 @@ __pycache__/
 *.pyc
 *.npy
 
-src/hrd/hrl_bs_ijcnn2023/envs/trp_cog_env/
+# src/hrd/hrl_bs_ijcnn2023/envs/trp_cog_env/
 two_resource_buffer.py
 test_env_cog.py
