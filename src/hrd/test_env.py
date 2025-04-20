@@ -2,6 +2,7 @@ import gym
 import trp_env
 import tiny_homeostasis
 import thermal_regulation
+# import trp_cog_env
 
 import numpy as np
 import torch
@@ -113,7 +114,7 @@ all_activations_random = []
 while not done and step < max_episode_steps:
     obs = torch.tensor(obs, dtype=torch.float32).unsqueeze(0)
     # print(obs.shape)
-    print(step)
+    # print(step)
     
     action = agent.get_action_and_value(obs)[0].detach().numpy()[0]
     action_random = agent_random.get_action_and_value(obs)[0].detach().numpy()[0]
@@ -133,11 +134,11 @@ while not done and step < max_episode_steps:
     
     obs, reward, done, info = env.step(action)
 
-    # env.render()
+    env.render()
     step += 1
     
 env.close()
-plot_umap([all_activations, all_activations_random], "UMAP of first layer activations")
+# plot_umap([all_activations, all_activations_random], "UMAP of first layer activations")
 
 #plot and visualize relationship between obss[:, 27:] and first_layer[:, 27:] weights of the actor network
 # use any visualization technique to show the relationship between the observation space and the first layer of the actor network
