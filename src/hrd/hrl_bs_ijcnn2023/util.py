@@ -23,7 +23,7 @@ def check_percent_grad(model):
     return percent_grad
 
 
-def make_env(env_id, seed, idx, capture_video, run_name, max_episode_steps=np.inf, gaussian_policy=False, cog=False):
+def make_env(env_id, seed, idx, capture_video, run_name, max_episode_steps=np.inf, gaussian_policy=False, cog=False, nutrient_val=[0,0]):
     def thunk():
         if env_id.startswith("Perceptual"):
             env = gym.make(
@@ -34,6 +34,7 @@ def make_env(env_id, seed, idx, capture_video, run_name, max_episode_steps=np.in
                 env_id,
                 dim_resource=3,
                 max_episode_steps=max_episode_steps,
+                nutrient_val=nutrient_val,
             )
         env = gym.wrappers.RecordEpisodeStatistics(env)
         if capture_video:

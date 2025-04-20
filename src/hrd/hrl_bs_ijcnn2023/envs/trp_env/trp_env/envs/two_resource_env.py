@@ -19,6 +19,8 @@ from mujoco_py.generated import const
 
 from trp_env.envs.mymujoco import MyMujocoEnv
 
+from typing import Tuple, Optional
+
 BIG = 1e6
 DEFAULT_CAMERA_CONFIG = {}
 
@@ -26,7 +28,7 @@ DEFAULT_CAMERA_CONFIG = {}
 class FoodClass(Enum):
     BLUE = auto()
     RED = auto()
-
+    SUPER = auto()
 
 def qtoeuler(q):
     """ quaternion to Euler angle
@@ -71,7 +73,13 @@ class TwoResourceEnv(MyMujocoEnv, utils.EzPickle):
                  show_move_line=False,
                  on_texture=False,
                  recognition_obs=False,
-                 *args, **kwargs):
+                 danger_zone: Optional[Tuple[Tuple[float, float], Tuple[float, float]]] = None,
+                 danger_zone_size=5.0,
+                 danger_damage: float = 0.1,
+                 super_food_nutrient: Tuple[float, float] = (0.3, 0.3),
+                 super_food_count: int = 1,
+                 *args, **kwargs
+                 ):
         """
 
         :param int n_blue:  Number of greens in each episode
@@ -121,10 +129,26 @@ class TwoResourceEnv(MyMujocoEnv, utils.EzPickle):
         self.internal_random_range = internal_random_range
         self.show_move_line = show_move_line
         self.recognition_obs = recognition_obs
+        self.kwargs = kwargs
 
         self.objects = []
         self._viewers = {}
         self.viewer = None
+
+        self.danger_zone = danger_zone or ((-5, -5), (5, 5))
+        self.danger_damage = danger_damage
+        self.super_food_nutrient = super_food_nutrient
+        self.super_food_count = super_food_count
+
+        self.time_in_danger = 0
+
+        # Place danger zone in bottom-left corner
+        corner_pos = -self.activity_range + 1  # Offset from wall
+        self.danger_zone = (
+            (corner_pos, corner_pos),  # Bottom-left corner
+            (corner_pos + danger_zone_size, corner_pos + danger_zone_size)  # Top-right corner
+        )
+
 
         # Internal state
         self._target_internal_state = np.array([0.0, 0.0])  # [Blue, Red]
@@ -263,8 +287,8 @@ class TwoResourceEnv(MyMujocoEnv, utils.EzPickle):
     def reset_internal_state(self):
         if self.internal_reset == "setpoint":
             self.internal_state = {
-                FoodClass.BLUE: 0.0,
-                FoodClass.RED: 0.0,
+                FoodClass.BLUE: self.kwargs['nutrient_val'][0],
+                FoodClass.RED: self.kwargs['nutrient_val'][1],
             }
         elif self.internal_reset == "random":
             self.internal_state = {
@@ -286,6 +310,7 @@ class TwoResourceEnv(MyMujocoEnv, utils.EzPickle):
         self.reset_internal_state()
         self.prev_interoception = self.get_interoception()
         self.agent_positions.clear()
+        self.time_in_danger = 0
 
         if n_blue is not None:
             self.n_blue = n_blue
@@ -323,6 +348,22 @@ class TwoResourceEnv(MyMujocoEnv, utils.EzPickle):
             typ = FoodClass.RED
             self.objects.append((x, y, typ))
             existing.add((x, y))
+
+        # Add super food
+        for _ in range(self.super_food_count):
+            x = self.wrapped_env.np_random.randint(-self.activity_range/2, 
+                                                  self.activity_range/2 + 1) * 2
+            y = self.wrapped_env.np_random.randint(-self.activity_range/2,
+                                                  self.activity_range/2 + 1) * 2
+            # Ensure super-food is placed in danger zone
+            while not self._in_danger_zone(x, y):
+                x = self.wrapped_env.np_random.randint(-self.activity_range/2,
+                                                     self.activity_range/2 + 1) * 2
+                y = self.wrapped_env.np_random.randint(-self.activity_range/2,
+                                                     self.activity_range/2 + 1) * 2
+            self.objects.append((x, y, FoodClass.SUPER))
+        
+        self.objects.extend(self._place_super_food_in_danger_zone())
 
         return (self.get_current_obs(), {}) if return_info else self.get_current_obs()
 
@@ -362,6 +403,13 @@ class TwoResourceEnv(MyMujocoEnv, utils.EzPickle):
         if is_blue:
             self.internal_state[FoodClass.BLUE] += self.blue_nutrient[0]
             self.internal_state[FoodClass.RED] += self.blue_nutrient[1]
+    
+    def _in_danger_zone(self, x: float, y: float) -> bool:
+        """Check if position (x,y) is in danger zone"""
+        
+        (x1, y1), (x2, y2) = self.danger_zone
+
+        return (min(x1, x2) <= x <= max(x1, x2)) and (min(y1, y2) <= y <= max(y1, y2))
 
     def step(self, action: np.ndarray):
         self.prev_interoception = self.get_interoception()
@@ -370,6 +418,47 @@ class TwoResourceEnv(MyMujocoEnv, utils.EzPickle):
         info['inner_rew'] = inner_rew
         com = self.wrapped_env.get_body_com("torso")
         x, y = com[:2]
+
+        if self._in_danger_zone(x, y):
+            self.time_in_danger += 1
+            # Apply progressive damage (more damage the longer you stay)
+            damage = self.danger_damage * (1 + 0.1 * self.time_in_danger)
+            self.internal_state[FoodClass.BLUE] -= damage
+            self.internal_state[FoodClass.RED] -= damage
+        else:
+            self.time_in_danger = 0
+
+        # Food-Eating
+        new_objs = []
+        self.num_blue_eaten = 0
+        self.num_red_eaten = 0
+        self.num_super_eaten = 0
+
+        for obj in self.objects:
+            ox, oy, typ = obj
+            if (ox - x) ** 2 + (oy - y) ** 2 < self.catch_range ** 2:
+                if typ is FoodClass.BLUE:
+                    self.update_by_food(is_red=False, is_blue=True)
+                    self.num_blue_eaten += 1
+                elif typ is FoodClass.RED:
+                    self.update_by_food(is_red=True, is_blue=False)
+                    self.num_red_eaten += 1
+                elif typ is FoodClass.SUPER:
+                    # super-food gives bigger boost
+                    self.internal_state[FoodClass.BLUE] += self.super_food_nutrient[0]
+                    self.internal_state[FoodClass.RED] += self.super_food_nutrient[1]
+                    self.num_super_eaten += 1
+
+                # Only respawn regular foods, keep super-foods static
+                if typ in [FoodClass.BLUE, FoodClass.RED]:
+                    new_objs.append(self.generate_new_object(type_gen=typ))
+                else:
+                    new_objs.append(obj)
+            else:
+                new_objs.append(obj)
+                
+        self.objects = new_objs
+
         self.agent_positions.append(np.array(com, np.float32))
         info['com'] = com
 
@@ -713,6 +802,43 @@ class TwoResourceEnv(MyMujocoEnv, utils.EzPickle):
                                                        size=(0.5, 0.5, 0.5),
                                                        rgba=rgba)
 
+        # Show danger zone
+        if self.wrapped_env.viewer:
+            (x1, y1), (x2, y2) = self.danger_zone
+            center = ((x1+x2)/2, (y1+y2)/2, 0.1)
+            size = (abs(x2-x1)/2, abs(y2-y1)/2, 0.1)
+            self.wrapped_env.viewer.add_marker(
+                pos=center,
+                label="DANGER",
+                type=const.GEOM_BOX,
+                size=size,
+                rgba=(1, 0, 0, 0.3),  # Semi-transparent red
+                emission=0.5  # Make it slightly glow
+            )
+            
+            # Add warning texture or pattern
+            for i in np.linspace(x1, x2, 5):
+                for j in np.linspace(y1, y2, 5):
+                    self.wrapped_env.viewer.add_marker(
+                        pos=(i, j, 0.2),
+                        label="",
+                        type=const.GEOM_SPHERE,
+                        size=(0.1, 0.1, 0.1),
+                        rgba=(1, 0, 0, 0.8)
+                    )
+        
+        # Show super-foods differently
+        for obj in self.objects:
+            ox, oy, typ = obj
+            if typ is FoodClass.SUPER:
+                self.wrapped_env.viewer.add_marker(
+                    pos=np.array([ox, oy, 0.5]),
+                    label="SUPER",
+                    type=const.GEOM_SPHERE,
+                    size=(0.7, 0.7, 0.7),  # Larger than normal food
+                    rgba=(1, 1, 0, 1)  # Yellow color
+                )
+
         im = None
         if mode in {"rgb_array", "depth_array", "rgbd_array"}:
             im = self.wrapped_env.render(mode, width, height, camera_id, camera_name)
@@ -723,3 +849,13 @@ class TwoResourceEnv(MyMujocoEnv, utils.EzPickle):
         del self.wrapped_env.viewer._markers[:]
 
         return im
+
+    def _place_super_food_in_danger_zone(self):
+        """Generate super-food positions within danger zone"""
+        (x1, y1), (x2, y2) = self.danger_zone
+        positions = []
+        for _ in range(self.super_food_count):
+            x = self.wrapped_env.np_random.uniform(x1, x2)
+            y = self.wrapped_env.np_random.uniform(y1, y2)
+            positions.append((x, y, FoodClass.SUPER))
+        return positions
