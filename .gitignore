@@ -1,6 +1,7 @@
 src/hrd/hrl_bs_ijcnn2023/videos/
 src/hrd/hrl_bs_ijcnn2023/runs/
 src/hrd/hrl_bs_ijcnn2023/models/
+two_resource_env_og.py
 
 # video file
 **/*.avi

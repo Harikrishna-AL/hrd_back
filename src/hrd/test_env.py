@@ -45,12 +45,21 @@ class Agent(nn.Module):
 		return action, probs.log_prob(action), probs.entropy(), self.critic(x)
 
 	def get_activations(self, x):
-		activations = []
+		activations_actor = []
+		activations_critic = []
+		x_actor = x
+		x_critic = x
 		for layer in self.actor:
 			if isinstance(layer, nn.Linear):
-				x = layer(x)
-				activations.append(x)
-		return activations
+				x_actor = layer(x_actor)
+				activations_actor.append(x_actor)
+
+		for layer in self.critic:
+			if isinstance(layer, nn.Linear):
+				x_critic = layer(x_critic)
+				activations_critic.append(x_critic)
+    
+		return activations_actor, activations_critic
 
 def plot_umap(activations, title):
 	import umap
@@ -93,7 +102,7 @@ agent = Agent(envs=envs, gaussian=False)
 agent.load_state_dict(torch.load("./hrl_bs_ijcnn2023/models/SmallLowGearAntTRP-v0__ppo__0__1741201287.pth", weights_only=True))
 agent_random = Agent(envs=envs, gaussian=False)
 
-env = gym.make("SmallLowGearAntTRP-v0", internal_reset = "setpoint", nutrient_val=[-0.7,-0.7])
+env = gym.make("SmallLowGearAntTRP-v0", internal_reset = "setpoint", nutrient_val=[0.7,0.7])
 
 env.seed(100)  # Seeding
 
@@ -102,7 +111,7 @@ done = False
 obs = env.reset()
 print(env.action_space.high, env.action_space.low)
 print(env.multi_modal_dims)
-max_episode_steps = 6000
+max_episode_steps = 2000
 # action = env.action_space.sample()
 actions = []
 obss = []
@@ -119,13 +128,13 @@ while not done and step < max_episode_steps:
     
     action = agent.get_action_and_value(obs)[0].detach().numpy()[0]
     action_random = agent_random.get_action_and_value(obs)[0].detach().numpy()[0]
-    activations = agent.get_activations(obs)
+    activations_actor, activations_critic = agent.get_activations(obs)
     activations_random = agent_random.get_activations(obs)
-    layer1_activation = activations[0].detach().numpy()[0]
-    layer1_activation_random = activations_random[0].detach().numpy()[0]
+    layer1_activation_actor = activations_actor[0].detach().numpy()[0]
+    layer1_activation_critic = activations_critic[0].detach().numpy()[0]
     
-    all_activations.append(layer1_activation)
-    all_activations_random.append(layer1_activation_random)
+    all_activations.append(layer1_activation_actor)
+    all_activations_random.append(layer1_activation_critic)
  
     #scale the action to the action space between env.action_space.low and env.action_space.high
     action  = action * (env.action_space.high - env.action_space.low) + env.action_space.low
@@ -139,6 +148,76 @@ while not done and step < max_episode_steps:
     step += 1
     
 env.close()
+
+from sklearn.decomposition import PCA
+import matplotlib.pyplot as plt
+import numpy as np
+
+# Convert to numpy arrays
+activations_np = np.array(all_activations)          # shape: [timesteps, features]
+activations_random_np = np.array(all_activations_random)
+
+print(activations_np.shape)
+# Run PCA
+pca = PCA(n_components=30)
+pca_result = pca.fit_transform(activations_np)
+pca_result_random = pca.fit_transform(activations_random_np)
+
+print(pca_result.shape)
+
+# Plotting PCA colored by time
+# plt.figure(figsize=(12, 6))
+
+# plt.subplot(1, 2, 1)
+# # plt.scatter(pca_result[:, 0], pca_result[:, 1], c=np.arange(len(pca_result)), cmap='viridis', s=5)
+# # plt.colorbar(label="Timestep")
+# plt.plot(activations_np[:,:], c='blue', alpha=0.5, label='Trained Agent')
+# plt.title("Trained Agent Activations Over Time")
+# plt.xlabel("time")
+# plt.ylabel("Neural Activity")
+
+# After converting to numpy arrays (right before your PCA code):
+# Convert to numpy arrays
+# activations_np = np.array(all_activations)          # shape: [timesteps, features]
+# activations_random_np = np.array(all_activations_random)
+
+# Plot heatmaps
+plt.figure(figsize=(15, 6))
+
+# Trained Agent Heatmap
+plt.subplot(1, 2, 1)
+plt.imshow(pca_result.T, aspect='auto', cmap='viridis', interpolation='nearest')
+plt.colorbar(label='Activation Strength')
+plt.title("Actor's Second Layer Activations when full")
+plt.xlabel("Time Step")
+plt.ylabel("Neuron Index")
+plt.yticks(range(pca_result.shape[1]))  # Show all neuron indices
+
+# Random Agent Heatmap
+plt.subplot(1, 2, 2)
+plt.imshow(pca_result_random.T, aspect='auto', cmap='viridis', interpolation='nearest')
+plt.colorbar(label='Activation Strength')
+plt.title("Critic's Second Layer Activations when full")
+plt.xlabel("Time Step")
+plt.ylabel("Neuron Index")
+plt.yticks(range(pca_result_random.shape[1]))
+
+plt.tight_layout()
+plt.savefig("pca_neural_activations_layer1_full.png", dpi=300)
+# plt.show()
+
+
+# plt.subplot(1, 2, 2)
+# # plt.scatter(pca_result_random[:, 0], pca_result_random[:, 1], c=np.arange(len(pca_result_random)), cmap='viridis', s=5)
+# # plt.colorbar(label="Timestep")
+# plt.plot(pca_result[:, 1], c='red', alpha=0.5, label='Random Agent')
+# plt.title("PCA of Random Agent Activations Over Time")
+# plt.xlabel("time")
+# plt.ylabel("PC2")
+
+# plt.tight_layout()
+# plt.show()
+
 # plot_umap([all_activations, all_activations_random], "UMAP of first layer activations")
 
 #plot and visualize relationship between obss[:, 27:] and first_layer[:, 27:] weights of the actor network
