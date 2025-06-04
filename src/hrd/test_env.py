@@ -185,30 +185,31 @@ n_activations_random = (n_activations_random - np.min(n_activations_random)) / (
 pca_result = n_activations
 pca_result_random = n_activations_random
 
-fig, axs = plt.subplots(5, 3, figsize=(18, 21), sharey=True)
+fig, axs = plt.subplots(3, 5, figsize=(21, 12), sharey=True)  # Swapped rows and columns
 
 for i in range(len(nut_values)):
     # Plot the heatmap for the trained agent
-	axs[i, 0].imshow(pca_result[i].T, aspect='auto', cmap='viridis', interpolation='nearest')
-	axs[i, 0].set_title(f"Actor's Second Layer Activation (Nutrient: {nut_values[i]})")
-	axs[i, 0].set_xlabel("Time Step")
-	axs[i, 0].set_ylabel("Neuron Index")	
-	axs[i, 0].set_yticks(range(pca_result.shape[2]))  # Show all neuron indices
-    # Plot the heatmap for the random agent
-	axs[i, 1].imshow(pca_result_random[i].T, aspect='auto', cmap='viridis', interpolation='nearest')
-	axs[i, 1].set_title(f"Critic's Second Layer Activation (Nutrient: {nut_values[i]})")
-	axs[i, 1].set_xlabel("Time Step")
-	axs[i, 1].set_ylabel("Neuron Index")
-	axs[i, 1].set_yticks(range(pca_result_random.shape[2]))  # Show all neuron indices
- 
-	#plot the velocities
-	axs[i, 2].plot(n_velocities[i], c='blue', alpha=0.5, label='Velocity')
-	axs[i, 2].set_title(f"Velocity (Nutrient: {nut_values[i]})")
-	axs[i, 2].set_xlabel("Time Step")
-	axs[i, 2].set_ylabel("Velocity")
-	axs[i, 2].set_ylim(0, np.max(n_velocities) * 1.1)  # Set y-axis limits to show velocity range
-	axs[i, 2].grid(True)
+    axs[0, i].imshow(pca_result[i].T, aspect='auto', cmap='viridis', interpolation='nearest')
+    axs[0, i].set_title(f"Actor's Second Layer Activation\nNutrient: {nut_values[i]}")
+    axs[0, i].set_xlabel("Time Step")
+    axs[0, i].set_ylabel("Neuron Index")
+    axs[0, i].set_yticks(range(pca_result.shape[2]))  # Show all neuron indices
 
- 
+    # Plot the heatmap for the random agent
+    axs[1, i].imshow(pca_result_random[i].T, aspect='auto', cmap='viridis', interpolation='nearest')
+    axs[1, i].set_title(f"Critic's Second Layer Activation\nNutrient: {nut_values[i]}")
+    axs[1, i].set_xlabel("Time Step")
+    axs[1, i].set_ylabel("Neuron Index")
+    axs[1, i].set_yticks(range(pca_result_random.shape[2]))  # Show all neuron indices
+
+    # Plot the velocities
+    axs[2, i].plot(n_velocities[i], c='blue', alpha=0.5, label='Velocity')
+    axs[2, i].set_title(f"Velocity\nNutrient: {nut_values[i]}")
+    axs[2, i].set_xlabel("Time Step")
+    axs[2, i].set_ylabel("Velocity")
+    axs[2, i].set_ylim(0, np.max(n_velocities) * 1.1)
+    axs[2, i].grid(True)
+
+import time
 plt.tight_layout()	
-plt.savefig("neural_activations_layer1.png", dpi=300)
+plt.savefig("hrl_bs_ijcnn2023/plots/neural_activity/neural_activations_layer1" + str(time.time()) + ".png", dpi=300)
