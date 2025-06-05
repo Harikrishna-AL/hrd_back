@@ -12,6 +12,7 @@ from hrl_bs_ijcnn2023.util import layer_init, BetaHead, make_env
 
 from sklearn.decomposition import PCA
 import matplotlib.pyplot as plt
+import argparse
 
 class Agent(nn.Module):
 	def __init__(self, envs, gaussian=False):
@@ -86,130 +87,140 @@ def plot_umap(activations, title):
 	ax[1].set_ylabel("UMAP2")
 	plt.show()
  
-
-nut_values = [-0.7, -0.3, 0.0, 0.3, 0.7]
-dir = "./hrl_bs_ijcnn2023/"
-n_activations = []
-n_activations_random = []
-n_positions = []
-n_velocities = []
-
-for n in range(len(nut_values)):
-	seed_ = (1 + 1) * 1
-	envs = gym.vector.SyncVectorEnv(
-		[make_env(env_id='SmallLowGearAntTRP-v0',
-					seed=seed_ + i,
-					idx=i,
-					capture_video=False,
-					run_name='test',
-					max_episode_steps=60_000,
-					gaussian_policy=False,
-					nutrient_val=[0.5,0.5]) for i in range(1)]
-	)
-
-
-	agent = Agent(envs=envs, gaussian=False)
-
-
-	agent.load_state_dict(torch.load("./hrl_bs_ijcnn2023/models/SmallLowGearAntTRP-v0__ppo__0__1741201287.pth", weights_only=True))
-	agent_random = Agent(envs=envs, gaussian=False)
-
-	env = gym.make("SmallLowGearAntTRP-v0", internal_reset = "setpoint", nutrient_val=[nut_values[n], nut_values[n]],)
-	env.seed(100)  # Seeding
-
-	done = False
-
-	obs = env.reset()
-	max_episode_steps = 3000
-	# action = env.action_space.sample()
-	actions = []
-	obss = []
-	step = 0
+ 
+def main(max_steps=3000):
+	print(f'Running test environment with max_steps={max_steps}')
+	nut_values = [-0.7, -0.3, 0.0, 0.3, 0.7]
+	dir = "./hrl_bs_ijcnn2023/"
+	n_activations = []
+	n_activations_random = []
+	n_positions = []
+	n_velocities = []
+	max_episode_steps = max_steps
+ 
+	for n in range(len(nut_values)):
+		seed_ = (1 + 1) * 1
+		envs = gym.vector.SyncVectorEnv(
+			[make_env(env_id='SmallLowGearAntTRP-v0',
+						seed=seed_ + i,
+						idx=i,
+						capture_video=False,
+						run_name='test',
+						max_episode_steps=60_000,
+						gaussian_policy=False,
+						nutrient_val=[0.5,0.5]) for i in range(1)]
+		)
 
 
-	all_activations = []
-	all_activations_random = []
-	positions = []
+		agent = Agent(envs=envs, gaussian=False)
 
-	while step < max_episode_steps:
-		obs = torch.tensor(obs, dtype=torch.float32).unsqueeze(0)
 
-		position = env.wrapped_env.get_body_com("torso")[:2]
-		print(f"Step: {step}, Position: {position}")
-  
-		action = agent.get_action_and_value(obs)[0].detach().numpy()[0]
-		action_random = agent_random.get_action_and_value(obs)[0].detach().numpy()[0]
-		activations_actor, activations_critic = agent.get_activations(obs)
-		activations_random = agent_random.get_activations(obs)
-		layer1_activation_actor = activations_actor[0].detach().numpy()[0]
-		layer1_activation_critic = activations_critic[0].detach().numpy()[0]
+		agent.load_state_dict(torch.load("./hrl_bs_ijcnn2023/models/SmallLowGearAntTRP-v0__ppo__0__1741201287.pth", weights_only=True))
+		agent_random = Agent(envs=envs, gaussian=False)
+
+		env = gym.make("SmallLowGearAntTRP-v0", internal_reset = "setpoint", nutrient_val=[nut_values[n], nut_values[n]],)
+		env.seed(100)  # Seeding
+
+		done = False
+
+		obs = env.reset()
 		
-		all_activations.append(layer1_activation_actor)
-		all_activations_random.append(layer1_activation_critic)
+		# action = env.action_space.sample()
+		actions = []
+		obss = []
+		step = 0
+
+
+		all_activations = []
+		all_activations_random = []
+		positions = []
+
+		while step < max_episode_steps:
+			obs = torch.tensor(obs, dtype=torch.float32).unsqueeze(0)
+
+			position = env.wrapped_env.get_body_com("torso")[:2]
+			print(f"Step: {step}, Position: {position}")
 	
-		#scale the action to the action space between env.action_space.low and env.action_space.high
-		action  = action * (env.action_space.high - env.action_space.low) + env.action_space.low
+			action = agent.get_action_and_value(obs)[0].detach().numpy()[0]
+			action_random = agent_random.get_action_and_value(obs)[0].detach().numpy()[0]
+			activations_actor, activations_critic = agent.get_activations(obs)
+			activations_random = agent_random.get_activations(obs)
+			layer1_activation_actor = activations_actor[0].detach().numpy()[0]
+			layer1_activation_critic = activations_critic[0].detach().numpy()[0]
+			
+			all_activations.append(layer1_activation_actor)
+			all_activations_random.append(layer1_activation_critic)
 		
-		actions.append(action)
-		obss.append(obs.detach().numpy())
-		positions.append(position.copy())
-		
-		obs, reward, done, info = env.step(action)
+			#scale the action to the action space between env.action_space.low and env.action_space.high
+			action  = action * (env.action_space.high - env.action_space.low) + env.action_space.low
+			
+			actions.append(action)
+			obss.append(obs.detach().numpy())
+			positions.append(position.copy())
+			
+			obs, reward, done, info = env.step(action)
 
-		env.render()
-		step += 1
-		
-	env.close()
+			env.render()
+			step += 1
+			
+		env.close()
 
-	# Convert to numpy arrays
-	activations_np = np.array(all_activations)          # shape: [timesteps, features]
-	activations_random_np = np.array(all_activations_random)
-	positions = np.array(positions)  # shape: [timesteps, 2]
-	velocities = np.array([positions[i] - positions[i-1] for i in range(1, len(positions), 1)])
-	speeds = np.array([np.sqrt(np.square(velocities[j][0]) + np.square(velocities[j][1])) for j in range(len(velocities))]) # Calculate speed as the norm of the velocity vector
- 
-	n_activations.append(activations_np)
-	n_activations_random.append(activations_random_np)
+		# Convert to numpy arrays
+		activations_np = np.array(all_activations)          # shape: [timesteps, features]
+		activations_random_np = np.array(all_activations_random)
+		positions = np.array(positions)  # shape: [timesteps, 2]
+		velocities = np.array([positions[i] - positions[i-1] for i in range(1, len(positions), 1)])
+		speeds = np.array([np.sqrt(np.square(velocities[j][0]) + np.square(velocities[j][1])) for j in range(len(velocities))]) # Calculate speed as the norm of the velocity vector
 	
-	n_positions.append(positions)
-	n_velocities.append(speeds)
+		n_activations.append(activations_np)
+		n_activations_random.append(activations_random_np)
+		
+		n_positions.append(positions)
+		n_velocities.append(speeds)
+	
+	n_activations = np.array(n_activations)  
+	n_activations_random = np.array(n_activations_random) 
+	n_positions = np.array(positions) 
+	
+	#normalize the activations between -1 and 1
+	n_activations = (n_activations - np.min(n_activations)) / (np.max(n_activations) - np.min(n_activations)) * 2 - 1
+	n_activations_random = (n_activations_random - np.min(n_activations_random)) / (np.max(n_activations_random) - np.min(n_activations_random)) * 2 - 1
+
+	pca_result = n_activations
+	pca_result_random = n_activations_random
+
+	fig, axs = plt.subplots(3, 5, figsize=(21, 12), sharey=True)  # Swapped rows and columns
+
+	for i in range(len(nut_values)):
+		# Plot the heatmap for the trained agent
+		axs[0, i].imshow(pca_result[i].T, aspect='auto', cmap='viridis', interpolation='nearest')
+		axs[0, i].set_title(f"Actor's Second Layer Activation\nNutrient: {nut_values[i]}")
+		axs[0, i].set_xlabel("Time Step")
+		axs[0, i].set_ylabel("Neuron Index")
+		axs[0, i].set_yticks(range(pca_result.shape[2]))  # Show all neuron indices
+
+		# Plot the heatmap for the random agent
+		axs[1, i].imshow(pca_result_random[i].T, aspect='auto', cmap='viridis', interpolation='nearest')
+		axs[1, i].set_title(f"Critic's Second Layer Activation\nNutrient: {nut_values[i]}")
+		axs[1, i].set_xlabel("Time Step")
+		axs[1, i].set_ylabel("Neuron Index")
+		axs[1, i].set_yticks(range(pca_result_random.shape[2]))  # Show all neuron indices
+
+		# Plot the velocities
+		axs[2, i].plot(n_velocities[i], c='blue', alpha=0.5, label='Velocity')
+		axs[2, i].set_title(f"Velocity\nNutrient: {nut_values[i]}")
+		axs[2, i].set_xlabel("Time Step")
+		axs[2, i].set_ylabel("Velocity")
+		axs[2, i].set_ylim(0, np.max(n_velocities) * 1.1)
+		axs[2, i].grid(True)
+
+	import time
+	plt.tight_layout()	
+	plt.savefig("hrl_bs_ijcnn2023/plots/neural_activity/neural_activations_layer1" + str(time.time()) + ".png", dpi=300)
  
-n_activations = np.array(n_activations)  
-n_activations_random = np.array(n_activations_random) 
-n_positions = np.array(positions) 
- 
-#normalize the activations between -1 and 1
-n_activations = (n_activations - np.min(n_activations)) / (np.max(n_activations) - np.min(n_activations)) * 2 - 1
-n_activations_random = (n_activations_random - np.min(n_activations_random)) / (np.max(n_activations_random) - np.min(n_activations_random)) * 2 - 1
-
-pca_result = n_activations
-pca_result_random = n_activations_random
-
-fig, axs = plt.subplots(3, 5, figsize=(21, 12), sharey=True)  # Swapped rows and columns
-
-for i in range(len(nut_values)):
-    # Plot the heatmap for the trained agent
-    axs[0, i].imshow(pca_result[i].T, aspect='auto', cmap='viridis', interpolation='nearest')
-    axs[0, i].set_title(f"Actor's Second Layer Activation\nNutrient: {nut_values[i]}")
-    axs[0, i].set_xlabel("Time Step")
-    axs[0, i].set_ylabel("Neuron Index")
-    axs[0, i].set_yticks(range(pca_result.shape[2]))  # Show all neuron indices
-
-    # Plot the heatmap for the random agent
-    axs[1, i].imshow(pca_result_random[i].T, aspect='auto', cmap='viridis', interpolation='nearest')
-    axs[1, i].set_title(f"Critic's Second Layer Activation\nNutrient: {nut_values[i]}")
-    axs[1, i].set_xlabel("Time Step")
-    axs[1, i].set_ylabel("Neuron Index")
-    axs[1, i].set_yticks(range(pca_result_random.shape[2]))  # Show all neuron indices
-
-    # Plot the velocities
-    axs[2, i].plot(n_velocities[i], c='blue', alpha=0.5, label='Velocity')
-    axs[2, i].set_title(f"Velocity\nNutrient: {nut_values[i]}")
-    axs[2, i].set_xlabel("Time Step")
-    axs[2, i].set_ylabel("Velocity")
-    axs[2, i].set_ylim(0, np.max(n_velocities) * 1.1)
-    axs[2, i].grid(True)
-
-import time
-plt.tight_layout()	
-plt.savefig("hrl_bs_ijcnn2023/plots/neural_activity/neural_activations_layer1" + str(time.time()) + ".png", dpi=300)
+if __name__ == "__main__":
+	# Parse command line arguments
+	parser = argparse.ArgumentParser(description="Test environment for HRD")
+	parser.add_argument('--max_steps', type=int, default=3000, help='Maximum number of steps per episode')
+	args = parser.parse_args()
+	main(max_steps=args.max_steps)
