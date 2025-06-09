@@ -95,4 +95,4 @@ Neural activation strength is modulated by internal state, mirroring biological 
 ### Next Steps:
 - Introduce controlled perturbations to the environment (e.g., changing reward delays or cost of movement).
 - Compare artificial neural dynamics with real brain recordings.
-- Investigate causality by lesioning parts of the network or input modalities.
+- Explore the clustering in neural activity to identify if it is due to different inputs concatenated together.
