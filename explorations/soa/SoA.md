@@ -80,6 +80,8 @@ Behavior is strongly modulated by internal state. Suggests homeostatic control i
 - **Visualizations:** [neural activity plots](https://github.com/CMC-lab/hrd/tree/60098e776b244d2c1ec7e6bd76a628fa4378393e/src/hrd/hrl_bs_ijcnn2023/plots/neural_activity)
 - **Code Used:** [neural activity analysis code](https://github.com/CMC-lab/hrd/blob/111b0a5a900452ceaa2a43a8d2f714e29620bc0e/src/hrd/test_env.py)
 
+![Neural Activity Heatmap](/src/hrd/hrl_bs_ijcnn2023/plots/neural_activity/neural_activations_layer11749100099.9103875.png)
+
 **Conclusion & Next Step:**  
 Neural activation strength is modulated by internal state, mirroring biological motivational systems. Next, we plan to analyze temporal dynamics of activity and compare this to real neural recordings from biological organisms.
 
