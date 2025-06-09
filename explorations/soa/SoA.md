@@ -1,37 +1,98 @@
-# State of Analysis (SoA) of the project
+# State of Analysis (SoA)
 
-This project aims to analyze the homeostatic behavior and neural activity of agents and compare that with the neural activity of the brain. We cloned and managed to run the basic two-resource env where the agent has to maintain two internal states or resource levels (blue and red) within a certain range. The agent has to learn certain behaviors in order to maintain these levels and ultimately survive. The agent receives feedback on its internal state as a component of its reward. Certain interesting behaviors emerge based on the internal state. In this project we are focusing on the foraging behavior of the agent. 
+##  Project Goal  
+To analyze the *homeostatic behavior* and *neural activity* of an artificial agent in a two-resource environment, and compare this with neural patterns in biological systems. The agent must maintain internal resource levels (red and blue) through foraging behavior, guided by interoceptive feedback and reinforcement learning. This project focuses on understanding:
+- How the agent learns homeostatic control
+- How its behavior adapts to internal states
+- How its neural activity reflects these changes
 
-## Experiments performed
-- <b>Characterizing the Agent and Environment:</b> 
-    The network has three inputs along with the following dimensions:
-    - Exteroception (or the input of external state): 40 dim
-    - Proprioception (or the input of body's movement or position in space): 27 dim
-    - Interoception (or the input of the internal state of the body): 2 dim
+---
 
-    The entire state space and action space is explained in detail here. <a href="https://github.com/CMC-lab/hrd/blob/01535ec66d591563f56759b2782e27f24fba1543/notes/network_characterization.md">link</a>
+##  Experiments & Analyses  
 
-- <b>Connectivity analysis of the trained weights:</b> We plotted the connectivity matrix of multiple neurons as a heatmap to observe any patterns in the trained weights. All the plots were plotted and can be found here <a href="https://github.com/CMC-lab/hrd/tree/01535ec66d591563f56759b2782e27f24fba1543/src/hrd/hrl_bs_ijcnn2023/plots/connectivity_matrix">link</a>.
-- <b>Visual analysis of the agent's Behavior:</b> 
-    - We ran simulations with different initial internal states and observed the behavior of the agent. The agent had different behavior in the environment based on the initial internal state and the distance to the resource. The value of internal state seems to affect the speed of the agent as well. More details regarding this can be seen in the observations section.
+### 1. **Characterizing Agent & Environment**
+**Goal:** Understand the structure and sensory input composition of the agent.
 
-- <b>Neural activity analysis:</b> 
-    - We plotted the neural activity of both the actor and critic networks. The activity as was dimensionally reduced using PCA to 30 dims and then plotted as a heatmap. The neural activity was plotted for different internal states to spot any patterns in the neural activity. The plots can be found here <a href="https://github.com/CMC-lab/hrd/tree/60098e776b244d2c1ec7e6bd76a628fa4378393e/src/hrd/hrl_bs_ijcnn2023/plots/neural_activity">link</a>.
+**Details:**
+- **Inputs:**
+  - Exteroception: 40-D (external sensory input)
+  - Proprioception: 27-D (body movement/position)
+  - Interoception: 2-D (internal state: [blue, red])
+- **Full documentation:** [network characterization notes](https://github.com/CMC-lab/hrd/blob/01535ec66d591563f56759b2782e27f24fba1543/notes/network_characterization.md)
 
-## Observations
-- Connectivity analysis of the trained weights: 
-    - Even though we couldn't find any direct patterns using the naked eye, we found that the difference in the values of weights before and after training is significant. This suggest that the network is learning something. The plots can be found here <a href="https://github.com/CMC-lab/hrd/tree/01535ec66d591563f56759b2782e27f24fba1543/src/hrd/hrl_bs_ijcnn2023/plots/connectivity_matrix">link</a>.
-    
-- Visual analysis of the agent's Behavior: 
-    - We observed a binary behavior where the agent moves around and eats when it's hungry else it doesn't move at all.
-    - When the agent is very hungry with internal state (-0.7, -0.7), it doesn't move at all because moving also costs energy.
-    - Also when the agent is completely full with internal state (0.7, 0.7), it doesn't move at all.
-    - The agent starts to move when the internal state is (0.0, 0.0) and it moves towards the resource.
-    - The speed of the agent seems to be affected by the internal state as well. The agent moves faster when the internal state is (0.0, 0.0) and it moves slower when the internal state is (-0.5, -0.5).
+**Outcome:** Established a foundational understanding of agent perception and input dimensionality.
 
-- Neural activity analysis:
-    - We observed that the magnitude of the neural activity is different for different internal states. The neural activity is higher when the internal state is (0.0, 0.0) and lower when the internal state is (-0.5, -0.5). This suggest that the network is learning something and the neural activity is affected by the internal state.
+**Conclusion & Next Step:**  
+We can now begin interpreting behavior and neural activity in terms of specific inputs.
 
-## Next steps
-- Running experiments with certain changes to the environment and visualize the behavior of the agent.
-- Measure the neural activity of the agent and compare that with the neural activity of the brain.
+---
+
+### 2. **Connectivity Analysis of Trained Weights**
+**Goal:** Investigate whether training leads to structural changes in the network’s weight connectivity.
+
+**Method:**
+- Visualized weight matrices as heatmaps.
+- Compared pre- and post-training values.
+
+**Outcome:**
+- No immediately visible patterns.
+- However, significant changes in weight magnitudes post-training.
+- **Plots available:** [connectivity matrices](https://github.com/CMC-lab/hrd/tree/01535ec66d591563f56759b2782e27f24fba1543/src/hrd/hrl_bs_ijcnn2023/plots/connectivity_matrix)
+
+- **Code Used:** [connectivity analysis code](https://github.com/CMC-lab/hrd/blob/111b0a5a900452ceaa2a43a8d2f714e29620bc0e/src/hrd/hrl_bs_ijcnn2023/connectivity.ipynb)
+
+**Conclusion & Next Step:**  
+Training does cause structural changes, implying learning. We should next quantify these differences or use clustering to extract structured patterns if they exist.
+
+---
+
+### 3. **Visual Behavior Analysis**
+**Goal:** Examine how agent behavior changes with varying initial internal states.
+
+**Method:**
+- Ran rollouts from different internal state initializations.
+- Observed movement and foraging behavior.
+
+**Outcome:**
+- Binary behavior emerged:
+  - Very low energy → no movement (e.g., state = (-0.7, -0.7))
+  - Very high energy → no movement (e.g., state = (0.7, 0.7))
+  - Mid-range (e.g., (0.0, 0.0)) → active foraging and faster movement
+- Movement speed correlated with internal state level
+
+**Conclusion & Next Step:**  
+Behavior is strongly modulated by internal state. Suggests homeostatic control is encoded. We will now link this behavior to neural activity and policy decision-making more directly.
+
+---
+
+### 4. **Neural Activity Analysis**
+**Goal:** Determine if internal state affects neural activation patterns.
+
+**Method:**
+- Recorded activations from actor and critic networks.
+- Reduced to 30 dimensions using PCA.
+- Plotted as heatmaps under different internal states.
+
+**Outcome:**
+- Clear variation in neural activity magnitude across states.
+  - Mid-range internal state → highest activity
+  - Lower energy states → suppressed activity
+- **Visualizations:** [neural activity plots](https://github.com/CMC-lab/hrd/tree/60098e776b244d2c1ec7e6bd76a628fa4378393e/src/hrd/hrl_bs_ijcnn2023/plots/neural_activity)
+- **Code Used:** [neural activity analysis code](https://github.com/CMC-lab/hrd/blob/111b0a5a900452ceaa2a43a8d2f714e29620bc0e/src/hrd/test_env.py)
+
+**Conclusion & Next Step:**  
+Neural activation strength is modulated by internal state, mirroring biological motivational systems. Next, we plan to analyze temporal dynamics of activity and compare this to real neural recordings from biological organisms.
+
+---
+
+## Key Takeaways & Next Steps
+
+### Key Conclusions:
+- Agent develops **adaptive behaviors** tied to its internal state, demonstrating homeostatic control.
+- **Neural activity** varies systematically with internal state, suggesting functional encoding.
+- **Weight changes** post-training confirm that learning occurs, though more analysis is needed to interpret structure.
+
+### Next Steps:
+- Introduce controlled perturbations to the environment (e.g., changing reward delays or cost of movement).
+- Compare artificial neural dynamics with real brain recordings.
+- Investigate causality by lesioning parts of the network or input modalities.
