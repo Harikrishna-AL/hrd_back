@@ -11,6 +11,7 @@ import math
 from hrl_bs_ijcnn2023.util import layer_init, BetaHead, make_env
 
 from sklearn.decomposition import PCA
+from scipy.interpolate import interp1d
 import matplotlib.pyplot as plt
 import argparse
 
@@ -88,7 +89,7 @@ def plot_umap(activations, title):
 	plt.show()
  
  
-def main(max_steps=3000):
+def main(max_steps=3000, velocity_per_step=10):
 	print(f'Running test environment with max_steps={max_steps}')
 	nut_values = [-0.7, -0.3, 0.0, 0.3, 0.7]
 	dir = "./hrl_bs_ijcnn2023/"
@@ -169,9 +170,11 @@ def main(max_steps=3000):
 		activations_np = np.array(all_activations)          # shape: [timesteps, features]
 		activations_random_np = np.array(all_activations_random)
 		positions = np.array(positions)  # shape: [timesteps, 2]
-		velocities = np.array([positions[i] - positions[i-1] for i in range(1, len(positions), 1)])
+		velocities = np.array([positions[i-1] - positions[i-velocity_per_step] for i in range(velocity_per_step, len(positions), velocity_per_step)])
 		speeds = np.array([np.sqrt(np.square(velocities[j][0]) + np.square(velocities[j][1])) for j in range(len(velocities))]) # Calculate speed as the norm of the velocity vector
-	
+
+		#add the initial velocity to the velocities as 0
+		speeds = np.insert(speeds, 0, 0)
 		n_activations.append(activations_np)
 		n_activations_random.append(activations_random_np)
 		
@@ -181,7 +184,7 @@ def main(max_steps=3000):
 	n_activations = np.array(n_activations)  
 	n_activations_random = np.array(n_activations_random) 
 	n_positions = np.array(positions) 
-	
+	n_velocities = np.array(n_velocities)
 	#normalize the activations between -1 and 1
 	n_activations = (n_activations - np.min(n_activations)) / (np.max(n_activations) - np.min(n_activations)) * 2 - 1
 	n_activations_random = (n_activations_random - np.min(n_activations_random)) / (np.max(n_activations_random) - np.min(n_activations_random)) * 2 - 1
@@ -189,15 +192,35 @@ def main(max_steps=3000):
 	pca_result = n_activations
 	pca_result_random = n_activations_random
 
-	fig, axs = plt.subplots(3, 5, figsize=(21, 12), sharey=True)  # Swapped rows and columns
+	#make velocity x axis as long as the number of timesteps in the activations
+	t_steps = np.arange(0, max_steps - 1, velocity_per_step)
+	t_steps_new = np.arange(max_steps)
+	print(f't_steps shape: {t_steps.shape}, t_steps_new shape: {t_steps_new.shape}, n_velocities shape: {n_velocities.shape}')
+	print(t_steps, t_steps_new)
+	
+ 
+	n_velocities_interp = []
+
+	for velocity in n_velocities:
+		interpolator = interp1d(t_steps, velocity, kind="cubic", fill_value="extrapolate")
+		velocity = interpolator(t_steps_new)
+		n_velocities_interp.append(velocity)
+  
+	n_velocities_interp = np.array(n_velocities_interp)
+	
+	fig, axs = plt.subplots(3, 5, figsize=(21, 12))  # Swapped rows and columns
+	print(f'pca_result shape: {pca_result.shape}, pca_result_random shape: {pca_result_random.shape}, n_velocities_interp shape: {n_velocities_interp.shape}')
 
 	for i in range(len(nut_values)):
 		# Plot the heatmap for the trained agent
+		
 		axs[0, i].imshow(pca_result[i].T, aspect='auto', cmap='viridis', interpolation='nearest')
 		axs[0, i].set_title(f"Actor's Second Layer Activation\nNutrient: {nut_values[i]}")
 		axs[0, i].set_xlabel("Time Step")
 		axs[0, i].set_ylabel("Neuron Index")
-		axs[0, i].set_yticks(range(pca_result.shape[2]))  # Show all neuron indices
+		axs[0, i].set_yticks(np.arange(0, 256, 8))  # Show all neuron indices
+		axs[0, i].set_yticklabels(np.arange(0, 256, 8)) 
+
 
 		# Plot the heatmap for the random agent
 		axs[1, i].imshow(pca_result_random[i].T, aspect='auto', cmap='viridis', interpolation='nearest')
@@ -205,13 +228,16 @@ def main(max_steps=3000):
 		axs[1, i].set_xlabel("Time Step")
 		axs[1, i].set_ylabel("Neuron Index")
 		axs[1, i].set_yticks(range(pca_result_random.shape[2]))  # Show all neuron indices
+		axs[1, i].set_yticks(np.arange(0, 256, 8))  # Show all neuron indices
+		axs[1, i].set_yticklabels(np.arange(0, 256, 8)) 
 
 		# Plot the velocities
-		axs[2, i].plot(n_velocities[i], c='blue', alpha=0.5, label='Velocity')
+		axs[2, i].plot(n_velocities_interp[i], c='blue', alpha=0.5, label='Velocity')
 		axs[2, i].set_title(f"Velocity\nNutrient: {nut_values[i]}")
 		axs[2, i].set_xlabel("Time Step")
+		axs[2, i].set_xlim(0, max_steps - 1)
 		axs[2, i].set_ylabel("Velocity")
-		axs[2, i].set_ylim(0, np.max(n_velocities) * 1.1)
+		axs[2, i].set_ylim(0, np.max(n_velocities_interp) * 1.1)
 		axs[2, i].grid(True)
 
 	import time
@@ -222,5 +248,6 @@ if __name__ == "__main__":
 	# Parse command line arguments
 	parser = argparse.ArgumentParser(description="Test environment for HRD")
 	parser.add_argument('--max_steps', type=int, default=3000, help='Maximum number of steps per episode')
+	parser.add_argument('--velocity_per_step', type=int, default=10, help='Number of steps to calculate velocity')
 	args = parser.parse_args()
-	main(max_steps=args.max_steps)
+	main(max_steps=args.max_steps, velocity_per_step=args.velocity_per_step)
