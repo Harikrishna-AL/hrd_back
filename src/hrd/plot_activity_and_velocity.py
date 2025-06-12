@@ -267,7 +267,8 @@ def main(max_steps=3000, velocity_per_step=10, plot_type='all'):
  
 	if plot_type == 'all':
 	
-		fig, axs = plt.subplots(7, 5, figsize=(21, 28))  # Swapped rows and columns
+		# Swapped rows and columns
+		fig, axs = plt.subplots(7, 5, figsize=(21, 28))  
 		print(f'pca_result shape: {pca_result.shape}, pca_result_random shape: {pca_result_random.shape}, n_velocities_interp shape: {n_velocities_interp.shape}')
 
 		for i in range(len(nut_values)):
@@ -332,6 +333,19 @@ def main(max_steps=3000, velocity_per_step=10, plot_type='all'):
 		plt.tight_layout()	
 		plt.savefig("hrl_bs_ijcnn2023/plots/neural_activity/neural_activations_layer1" + str(time.time()) + ".png", dpi=300)
 		plt.close()
+  
+		#save all the data as .npz file
+		np.savez("hrl_bs_ijcnn2023/plots/neural_activity/neural_activations.npz",
+			activations_layer1_act=n_activations,
+			activations_layer1_crt=n_activations_random,
+			activations_layer2_act=n_activations_layer2_act,
+			activations_layer2_crt=n_activations_layer2_crt,
+			activations_output_act=n_activations_output_act,
+			activations_output_crt=n_activations_output_crt,
+			positions=n_positions,
+			velocities=n_velocities_interp,
+			internal_mags=n_internal_mags
+		)
 	
 	if plot_type == 'vel':
 		print(bin_centers, velocity_vars)
