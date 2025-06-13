@@ -225,11 +225,15 @@ def main(max_steps=3000, velocity_per_step=10, plot_type='all'):
 	n_activations_layer2_crt = np.array(n_activations_layer2_crt)
 	n_activations_output_act = np.array(n_activations_output_act)
 	n_activations_output_crt = np.array(n_activations_output_crt)
-	n_positions = np.array(positions) 
+	n_positions = np.array(n_positions) 
 	n_velocities = np.array(n_velocities)
 	#normalize the activations between -1 and 1
 	n_activations = (n_activations - np.min(n_activations)) / (np.max(n_activations) - np.min(n_activations)) * 2 - 1
 	n_activations_random = (n_activations_random - np.min(n_activations_random)) / (np.max(n_activations_random) - np.min(n_activations_random)) * 2 - 1
+	n_activations_layer2_act = (n_activations_layer2_act - np.min(n_activations_layer2_act)) / (np.max(n_activations_layer2_act) - np.min(n_activations_layer2_act)) * 2 - 1
+	n_activations_layer2_crt = (n_activations_layer2_crt - np.min(n_activations_layer2_crt)) / (np.max(n_activations_layer2_crt) - np.min(n_activations_layer2_crt)) * 2 - 1
+	n_activations_output_act = (n_activations_output_act - np.min(n_activations_output_act)) / (np.max(n_activations_output_act) - np.min(n_activations_output_act)) * 2 - 1
+	n_activations_output_crt = (n_activations_output_crt - np.min(n_activations_output_crt)) / (np.max(n_activations_output_crt) - np.min(n_activations_output_crt)) * 2 - 1
 
 	pca_result = n_activations
 	pca_result_random = n_activations_random
