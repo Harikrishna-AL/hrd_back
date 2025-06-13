@@ -107,6 +107,7 @@ def main(max_steps=3000, velocity_per_step=10, plot_type='all'):
 	n_positions = []
 	n_velocities = []
 	n_internal_mags = []
+	n_objects = []
 	max_episode_steps = max_steps
  
 	for n in range(len(nut_values)):
@@ -148,6 +149,7 @@ def main(max_steps=3000, velocity_per_step=10, plot_type='all'):
 		all_activations_layer2_crt = []
 		all_activations_output_act = []
 		all_activations_output_crt = []
+		all_objects = []
 		positions = []
 		internal_mags = []
 
@@ -182,6 +184,7 @@ def main(max_steps=3000, velocity_per_step=10, plot_type='all'):
 			actions.append(action)
 			obss.append(obs.detach().numpy())
 			positions.append(position.copy())
+			all_objects.append(env.objects)
 			
 			obs, reward, done, info = env.step(action)
    
@@ -218,6 +221,7 @@ def main(max_steps=3000, velocity_per_step=10, plot_type='all'):
 		
 		n_positions.append(positions)
 		n_velocities.append(speeds)
+		n_objects.append(all_objects)
 	
 	n_activations = np.array(n_activations)  
 	n_activations_random = np.array(n_activations_random)
@@ -348,7 +352,8 @@ def main(max_steps=3000, velocity_per_step=10, plot_type='all'):
 			activations_output_crt=n_activations_output_crt,
 			positions=n_positions,
 			velocities=n_velocities_interp,
-			internal_mags=n_internal_mags
+			internal_mags=n_internal_mags,
+			objects=n_objects
 		)
 	
 	if plot_type == 'vel':
