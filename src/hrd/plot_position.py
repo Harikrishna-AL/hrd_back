@@ -73,6 +73,10 @@ if __name__ == "__main__":
         ax[i].scatter(blue_avg[i, :, 0], blue_avg[i, :, 1], c='blue', label='Blue Objects', s=3)
         ax[i].scatter(red_avg[i, :, 0], red_avg[i, :, 1], c='red', label='Red Objects', s=3)
         ax[i].legend()
+        
+        #plot the starting and ending position of the trajectory with a different marker
+        ax[i].scatter(positions[i, 0, 0], positions[i, 0, 1], c='green', marker='o', label='Start Position', s=50)
+        ax[i].scatter(positions[i, -1, 0], positions[i, -1, 1], c='black', marker='x', label='End Position', s=50)
     plt.tight_layout()
     save_path = "hrl_bs_ijcnn2023/plots/neural_activity/positions_trajectory.png"
     plt.savefig(save_path)
