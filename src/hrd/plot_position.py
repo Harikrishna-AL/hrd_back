@@ -69,6 +69,8 @@ if __name__ == "__main__":
         ax[i].set_title(f'Nutrient {i+1} Trajectory')
         ax[i].set_xlabel('X axis Position')
         ax[i].set_ylabel('Y axis Position')
+        ax[i].set_xlim(-6, 6)
+        ax[i].set_ylim(-6, 6)
         
         ax[i].scatter(blue_avg[i, :, 0], blue_avg[i, :, 1], c='blue', label='Blue Objects', s=3)
         ax[i].scatter(red_avg[i, :, 0], red_avg[i, :, 1], c='red', label='Red Objects', s=3)
