@@ -91,7 +91,7 @@ def plot_umap(activations, title):
 	plt.show()
  
  
-def main(max_steps=3000, velocity_per_step=10, plot_type='all', seed=10):
+def main(max_steps=3000, velocity_per_step=10, plot_type='all', seed=10, model_path="./hrl_bs_ijcnn2023/models/SmallLowGearAntTRP-v0__ppo__0__1741201287.pth"):
 	torch.manual_seed(seed)
 
 	np.random.seed(seed)
@@ -131,7 +131,7 @@ def main(max_steps=3000, velocity_per_step=10, plot_type='all', seed=10):
 		agent = Agent(envs=envs, gaussian=False)
 
 
-		agent.load_state_dict(torch.load("./hrl_bs_ijcnn2023/models/SmallLowGearAntTRP-v0__ppo__0__1741201287.pth", weights_only=True))
+		agent.load_state_dict(torch.load(model_path, weights_only=True))
 		agent_random = Agent(envs=envs, gaussian=False)
 
 		env = gym.make("SmallLowGearAntTRP-v0", internal_reset = "setpoint", nutrient_val=[nut_values[n], nut_values[n]],)
@@ -376,6 +376,7 @@ if __name__ == "__main__":
 	parser.add_argument('--velocity_per_step', type=int, default=10, help='Number of steps to calculate velocity')
 	parser.add_argument('--plot_type', type=str, default='all', choices=['all', 'vel'], help='Type of plot to generate')
 	parser.add_argument('--multi_seed', action='store_true', help='Run with multiple seeds for robustness testing')
+	parser.add_argument('--model_path', type=str, default="./hrl_bs_ijcnn2023/models/SmallLowGearAntTRP-v0__ppo__0__1741201287.pth", help='Path to the model weights')
 	args = parser.parse_args()
 	
 	if args.multi_seed:
@@ -389,4 +390,4 @@ if __name__ == "__main__":
 			main(max_steps=args.max_steps, velocity_per_step=args.velocity_per_step, plot_type=args.plot_type, seed=seed)
 	else:
 		print("Running with single seed for testing...")
-		main(max_steps=args.max_steps, velocity_per_step=args.velocity_per_step, plot_type=args.plot_type, seed=10)
+		main(max_steps=args.max_steps, velocity_per_step=args.velocity_per_step, plot_type=args.plot_type, seed=10, model_path=args.model_path)
