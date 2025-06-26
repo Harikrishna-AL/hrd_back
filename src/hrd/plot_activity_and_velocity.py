@@ -67,7 +67,7 @@ class Agent(nn.Module):
 			if isinstance(layer, nn.Linear):
 				x_critic = layer(x_critic)
 				activations_critic.append(x_critic)
-    
+ 
 		return activations_actor, activations_critic
 
 def plot_umap(activations, title):
@@ -91,7 +91,11 @@ def plot_umap(activations, title):
 	plt.show()
  
  
-def main(max_steps=3000, velocity_per_step=10, plot_type='all'):
+def main(max_steps=3000, velocity_per_step=10, plot_type='all', seed=10):
+	torch.manual_seed(seed)
+
+	np.random.seed(seed)
+	
 	print(f'Running test environment with max_steps={max_steps}')
 	if plot_type == 'all':
 		nut_values = [-0.7, -0.3, 0.0, 0.3, 0.7]
@@ -109,7 +113,7 @@ def main(max_steps=3000, velocity_per_step=10, plot_type='all'):
 	n_internal_mags = []
 	n_objects = []
 	max_episode_steps = max_steps
- 
+
 	for n in range(len(nut_values)):
 		seed_ = (1 + 1) * 1
 		envs = gym.vector.SyncVectorEnv(
@@ -158,7 +162,7 @@ def main(max_steps=3000, velocity_per_step=10, plot_type='all'):
 
 			position = env.wrapped_env.get_body_com("torso")[:2]
 			print(f"Step: {step}, Position: {position}")
-	
+
 			action = agent.get_action_and_value(obs)[0].detach().numpy()[0]
 			action_random = agent_random.get_action_and_value(obs)[0].detach().numpy()[0]
 			activations_actor, activations_critic = agent.get_activations(obs)
@@ -187,9 +191,9 @@ def main(max_steps=3000, velocity_per_step=10, plot_type='all'):
 			all_objects.append(env.objects)
 			
 			obs, reward, done, info = env.step(action)
-   
+
 			internal_state = list(env.internal_state.values())
-   
+
 			internal_mag = np.sqrt(np.square(internal_state[0]) + np.square(internal_state[1]))
 			internal_mags.append(internal_mag)
 			
@@ -199,7 +203,7 @@ def main(max_steps=3000, velocity_per_step=10, plot_type='all'):
 		env.close()
 
 		# Convert to numpy arrays
-		activations_np = np.array(all_activations)          # shape: [timesteps, features]
+		activations_np = np.array(all_activations)           # shape: [timesteps, features]
 		activations_random_np = np.array(all_activations_random)
 		activations_layer2_act_np = np.array(all_activations_layer2_act)  # shape: [timesteps, features]
 		activations_layer2_crt_np = np.array(all_activations_layer2_crt)  # shape: [timesteps, features]
@@ -222,14 +226,14 @@ def main(max_steps=3000, velocity_per_step=10, plot_type='all'):
 		n_positions.append(positions)
 		n_velocities.append(speeds)
 		n_objects.append(all_objects)
-	
+
 	n_activations = np.array(n_activations)  
 	n_activations_random = np.array(n_activations_random)
 	n_activations_layer2_act = np.array(n_activations_layer2_act)
 	n_activations_layer2_crt = np.array(n_activations_layer2_crt)
 	n_activations_output_act = np.array(n_activations_output_act)
 	n_activations_output_crt = np.array(n_activations_output_crt)
-	n_positions = np.array(n_positions) 
+	n_positions = np.array(n_positions)  
 	n_velocities = np.array(n_velocities)
 	#normalize the activations between -1 and 1
 	n_activations = (n_activations - np.min(n_activations)) / (np.max(n_activations) - np.min(n_activations)) * 2 - 1
@@ -247,8 +251,8 @@ def main(max_steps=3000, velocity_per_step=10, plot_type='all'):
 	t_steps_new = np.arange(max_steps)
 	print(f't_steps shape: {t_steps.shape}, t_steps_new shape: {t_steps_new.shape}, n_velocities shape: {n_velocities.shape}')
 	print(t_steps, t_steps_new)
-	
- 
+
+
 	n_velocities_interp = []
 
 	for v in range(len(n_velocities)):
@@ -269,12 +273,11 @@ def main(max_steps=3000, velocity_per_step=10, plot_type='all'):
 				velocity_vars.append(var)
 				bin_centers.append(center)
 
-      
-  
-	n_velocities_interp = np.array(n_velocities_interp)
- 
-	if plot_type == 'all':
 	
+	n_velocities_interp = np.array(n_velocities_interp)
+
+	if plot_type == 'all':
+
 		# Swapped rows and columns
 		fig, axs = plt.subplots(7, 5, figsize=(21, 28))  
 		print(f'pca_result shape: {pca_result.shape}, pca_result_random shape: {pca_result_random.shape}, n_velocities_interp shape: {n_velocities_interp.shape}')
@@ -287,7 +290,7 @@ def main(max_steps=3000, velocity_per_step=10, plot_type='all'):
 			axs[0, i].set_xlabel("Time Step")
 			axs[0, i].set_ylabel("Neuron Index")
 			axs[0, i].set_yticks(np.arange(0, 256, 8))  # Show all neuron indices
-			axs[0, i].set_yticklabels(np.arange(0, 256, 8)) 
+			axs[0, i].set_yticklabels(np.arange(0, 256, 8))  
 
 
 			# Plot the heatmap for the trained agent layer 1 critic
@@ -296,8 +299,8 @@ def main(max_steps=3000, velocity_per_step=10, plot_type='all'):
 			axs[1, i].set_xlabel("Time Step")
 			axs[1, i].set_ylabel("Neuron Index")
 			axs[1, i].set_yticks(np.arange(0, 256, 8))  # Show all neuron indices
-			axs[1, i].set_yticklabels(np.arange(0, 256, 8)) 
-   
+			axs[1, i].set_yticklabels(np.arange(0, 256, 8))  
+
 			# Plot the heatmap for the layer 2 actor activations
 			axs[2, i].imshow(n_activations_layer2_act[i].T, aspect='auto', cmap='viridis', interpolation='nearest')
 			axs[2, i].set_title(f"Actor's Layer 2 Activation\nNutrient: {nut_values[i]}")
@@ -305,7 +308,7 @@ def main(max_steps=3000, velocity_per_step=10, plot_type='all'):
 			axs[2, i].set_ylabel("Neuron Index")
 			axs[2, i].set_yticks(np.arange(0, 256, 8))
 			axs[2, i].set_yticklabels(np.arange(0, 256, 8))
-   
+
 			# Plot the heatmap for the layer 2 critic activations
 			axs[3, i].imshow(n_activations_layer2_crt[i].T, aspect='auto', cmap='viridis', interpolation='nearest')
 			axs[3, i].set_title(f"Critic's Layer 2 Activation\nNutrient: {nut_values[i]}")
@@ -339,11 +342,11 @@ def main(max_steps=3000, velocity_per_step=10, plot_type='all'):
 
 		import time
 		plt.tight_layout()	
-		plt.savefig("hrl_bs_ijcnn2023/plots/neural_activity/neural_activations_layer1" + str(time.time()) + ".png", dpi=300)
+		plt.savefig("hrl_bs_ijcnn2023/plots/neural_activity/neural_activations_layer1" + str(time.time()) + "_" + str(seed) + ".png", dpi=300)
 		plt.close()
-  
+
 		#save all the data as .npz file
-		np.savez("hrl_bs_ijcnn2023/plots/neural_activity/neural_activations.npz",
+		np.savez("hrl_bs_ijcnn2023/plots/neural_activity/neural_activations" + str(seed) + ".npz",
 			activations_layer1_act=n_activations,
 			activations_layer1_crt=n_activations_random,
 			activations_layer2_act=n_activations_layer2_act,
@@ -355,7 +358,7 @@ def main(max_steps=3000, velocity_per_step=10, plot_type='all'):
 			internal_mags=n_internal_mags,
 			objects=n_objects
 		)
-	
+
 	if plot_type == 'vel':
 		print(bin_centers, velocity_vars)
 		plt.plot(bin_centers, velocity_vars, marker='o')
@@ -372,5 +375,18 @@ if __name__ == "__main__":
 	parser.add_argument('--max_steps', type=int, default=3000, help='Maximum number of steps per episode')
 	parser.add_argument('--velocity_per_step', type=int, default=10, help='Number of steps to calculate velocity')
 	parser.add_argument('--plot_type', type=str, default='all', choices=['all', 'vel'], help='Type of plot to generate')
+	parser.add_argument('--multi_seed', action='store_true', help='Run with multiple seeds for robustness testing')
 	args = parser.parse_args()
-	main(max_steps=args.max_steps, velocity_per_step=args.velocity_per_step, plot_type=args.plot_type)
+	
+	if args.multi_seed:
+		print("Running with multiple seeds for robustness testing...")
+		seed_values = [10, 20, 30, 40, 50, 60]
+  
+		for seed in seed_values:
+			print(f"Running with seed: {seed}")
+			torch.manual_seed(seed)
+			np.random.seed(seed)	
+			main(max_steps=args.max_steps, velocity_per_step=args.velocity_per_step, plot_type=args.plot_type, seed=seed)
+	else:
+		print("Running with single seed for testing...")
+		main(max_steps=args.max_steps, velocity_per_step=args.velocity_per_step, plot_type=args.plot_type, seed=10)
