@@ -376,7 +376,7 @@ if __name__ == "__main__":
 	parser.add_argument('--velocity_per_step', type=int, default=10, help='Number of steps to calculate velocity')
 	parser.add_argument('--plot_type', type=str, default='all', choices=['all', 'vel'], help='Type of plot to generate')
 	parser.add_argument('--multi_seed', action='store_true', help='Run with multiple seeds for robustness testing')
-	parser.add_argument('--model_path', type=str, default="./hrl_bs_ijcnn2023/models/SmallLowGearAntTRP-v0__ppo__0__1741201287.pth", help='Path to the model weights')
+	parser.add_argument('--model_path', type=str, default='./hrl_bs_ijcnn2023/models/SmallLowGearAntTRP-v0__ppo__0__1741201287.pth', help='Path to the model weights')
 	args = parser.parse_args()
 	
 	if args.multi_seed:
@@ -387,7 +387,7 @@ if __name__ == "__main__":
 			print(f"Running with seed: {seed}")
 			torch.manual_seed(seed)
 			np.random.seed(seed)	
-			main(max_steps=args.max_steps, velocity_per_step=args.velocity_per_step, plot_type=args.plot_type, seed=seed)
+			main(max_steps=args.max_steps, velocity_per_step=args.velocity_per_step, plot_type=args.plot_type, seed=seed, model_path=args.model_path)
 	else:
 		print("Running with single seed for testing...")
 		main(max_steps=args.max_steps, velocity_per_step=args.velocity_per_step, plot_type=args.plot_type, seed=10, model_path=args.model_path)
